@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+body {
+  @apply bg-gray-50 text-gray-800;
+}
+
+/* Konfigurasi Printer Thermal 58mm */
+@media print {
+  /* Sembunyikan seluruh UI web */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Tampilkan hanya area struk */
+  #receipt-area, #receipt-area * {
+    visibility: visible;
+  }
+  
+  #receipt-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 58mm; /* Sesuaikan menjadi 80mm jika pakai printer besar */
+    margin: 0;
+    padding: 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    color: #000;
+  }
+}
