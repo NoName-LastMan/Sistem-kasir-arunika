@@ -65,11 +65,11 @@ class DatabaseSeeder extends Seeder
     private function seedSettings(): void
     {
         Setting::firstOrCreate([], [
-            'store_name'          => 'Warmindo & Cafe "Mie Nusantara"',
-            'store_address'       => 'Jl. Pahlawan No. 45, Bandung',
-            'store_phone'         => '0812-3456-7890',
-            'receipt_header'      => 'WARMINDO MIE NUSANTARA',
-            'receipt_footer'      => 'Terima kasih sudah makan di tempat kami!',
+            'store_name'          => 'Arunika Coffee and Space',
+            'store_address'       => 'Lt. 2 Gedung Unimus Mart, Jl. Kedungmundu No. 18, Semarang',
+            'store_phone'         => '0889-8572-2088',
+            'receipt_header'      => 'ARUNIKA COFFEE & SPACE UNIMUS',
+            'receipt_footer'      => 'Terima kasih telah berkunjung ke Arunika Coffee and Space UNIMUS!',
             'default_tax_rate'    => 10.00,
             'service_charge_rate' => 0.00,
             'invoice_prefix'      => 'INV-',

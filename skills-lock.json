@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "skills": {
+    "ai-video-generation": {
+      "source": "101-skills/superpowers",
+      "sourceType": "github",
+      "skillPath": "tools/video/ai-video-generation/SKILL.md",
+      "computedHash": "a2d7f92bb0fc3670a531576ce6e4ae0b7ed842cdeebec354a5bebe4c97821e39"
+    },
+    "domain-modeling": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/domain-modeling/SKILL.md",
+      "computedHash": "f377a1341e1b368833cfe5889ace3e61d7df48d7a9e5da9253dba75d062bbfbc"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "106acf230014cbb43ca34e6410371321b56ca742f9ee0442e8ec05bf02eb0384"
+    },
+    "hyperframes-animation": {
+      "source": "heygen-com/hyperframes",
+      "sourceType": "github",
+      "skillPath": "skills/hyperframes-animation/SKILL.md",
+      "computedHash": "1fca72d17a4202929b3b99ec0078120e8eb10c2f6741b9ddc25802dfc49568e1"
+    },
+    "ios-design": {
+      "source": "uizze.sh",
+      "sourceType": "well-known",
+      "computedHash": "6b92ffbe225bdd877e1245e843c5b79f1e37f7ab40d3f802937044f6aee29d20"
+    },
+    "ui-taste": {
+      "source": "uizze.sh",
+      "sourceType": "well-known",
+      "computedHash": "9b73951ae54b7d1eb81e69bb2f47d1622b3813bbefbd6c0aaa36dfcf938f1f27"
+    }
+  }
+}
