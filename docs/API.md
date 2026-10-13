@@ -124,6 +124,9 @@ Endpoint untuk kasir harian (`cashier`), staf dapur, maupun admin.
 - `POST /api/admin/products/{product}/recipe` - Konfigurasi takaran bahan baku (dengan conversion factor)
 - `DELETE /api/admin/products/{product}/recipe/{ingredient}` - Hapus bahan baku dari resep
 
+### Prediksi Kebutuhan Stok (Forecasting Staf)
+- `GET /api/admin/inventory/forecasting` - Data perkiraan sisa hari habis (*Days to Stockout*), burn rate harian, rekomendasi jumlah belanja 7 hari, dan instruksi operasional bahan.
+
 ### Waste & Spoilage Tracking (Pencatatan Bahan Terbuang/Rusak)
 - `GET /api/admin/waste` - Riwayat log bahan yang terbuang/basi/rusak
 - `POST /api/admin/waste` - Catat waste (otomatis memotong stok bahan baku dengan audit log)
@@ -139,6 +142,10 @@ Endpoint untuk kasir harian (`cashier`), staf dapur, maupun admin.
 
 *Hanya dapat diakses oleh akun dengan role `superadmin`.*
 
+### Executive AI Forecasting & Financial Intelligence
+- `GET /api/superadmin/inventory/forecasting` - Akses mendalam prediksi stok mencakup estimasi kebutuhan anggaran belanja (Rupiah), ringkasan finansial, dan analisis naratif eksekutif AI.
+- `POST /api/superadmin/inventory/test-morning-digest` - Memicu pengiriman uji coba laporan pagi eksekutif langsung ke email owner.
+
 ### Rekonsiliasi Stok (Stock Opname Otomatis & Deteksi Selisih)
 - `GET /api/superadmin/reconciliation/expected-stock` - Menghitung ekspektasi stok sistem matematis berdasarkan mutasi masuk/keluar
 - `POST /api/superadmin/reconciliation` - Input stok fisik riil, kalkulasi otomatis selisih & auto-flag anomali jika selisih > 5%
@@ -147,3 +154,4 @@ Endpoint untuk kasir harian (`cashier`), staf dapur, maupun admin.
 ### Monitoring Owner Terpadu
 - `GET /api/superadmin/monitoring/all-mutations` - Pantau seluruh kartu mutasi stok real-time (siapa yang mengubah, kapan, dan berapa jumlahnya)
 - `GET /api/superadmin/monitoring/anomalies` - Pantau rekap selisih stok yang mencurigakan secara terpusat
+

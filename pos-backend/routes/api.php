@@ -138,6 +138,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/waste', [WasteController::class, 'store']);
         Route::get('/waste/summary', [WasteController::class, 'summary']);
 
+        // Prediksi Stok & Kebutuhan Bahan (Forecasting Staf)
+        Route::get('/inventory/forecasting', [\App\Http\Controllers\Api\Admin\ForecastingController::class, 'index']);
+
         // Pengaturan Toko & Struk
         Route::get('/settings', [SettingController::class, 'show']);
         Route::put('/settings', [SettingController::class, 'update']);
@@ -147,6 +150,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // KHUSUS SUPERADMIN (OWNER) SAJA
     // ==========================================
     Route::middleware([EnsureAdmin::class, EnsureSuperAdmin::class])->prefix('superadmin')->group(function () {
+        // Executive Forecasting & AI Financial Intelligence
+        Route::get('/inventory/forecasting', [\App\Http\Controllers\Api\Admin\ForecastingController::class, 'executive']);
+        Route::post('/inventory/test-morning-digest', [\App\Http\Controllers\Api\Admin\DigestController::class, 'sendTestDigest']);
+
         // Rekonsiliasi Stok (Stock Opname) - hanya owner
         Route::get('/reconciliation/expected-stock', [ReconciliationController::class, 'expectedStock']);
         Route::post('/reconciliation', [ReconciliationController::class, 'reconcile']);
