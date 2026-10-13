@@ -30,27 +30,26 @@ Sistem ini tidak hanya berfungsi sebagai pencatat transaksi kasir biasa, melaink
 - **Pola Desain**: _Service Layer Pattern_ (Semua kalkulasi uang, mutasi stok, dan laporan diisolasi di service khusus, bukan di controller)
 - **Pengujian Unit**: PHPUnit 12.x (Mencakup test kalkulasi harga, mutasi stok bahan, void, waste, dan rekonsiliasi anomali)
 
-### 2.2 Frontend (`pos-frontend`)
+### 2.2 Frontend (Standarisasi React)
 
-- **Framework**: Vue 3 (Composition API `<script setup>`)
-- **Build Tool**: Vite 8.x
-- **State Management**: Pinia 4.x
-- **Routing**: Vue Router 5.x dengan Navigation Guard berbasis Role (RBAC)
-- **Styling**: Tailwind CSS v4
-- **Icon Set**: Lucide Vue Next
-- **Hardware Integration**:
-  - _HID Barcode Scanner_: Auto-detect keystroke stream USB/Bluetooth scanner via composable.
-  - _Sound Feedback_: Web Audio API native synthesizer (beeps, success chime, warning) tanpa file asset eksternal.
+- **Framework**: React 18 (Hooks & Functional Components)
+- **Build Tool**: Vite
+- **State Management**: Zustand
+- **Routing**: React Router DOM (dengan Protected Route RBAC)
+- **Styling**: Tailwind CSS
+- **Icon Set**: Lucide React
+- **Status Migrasi**: Frontend kasir lama berbasis Vue 3 telah dihapus total. Sistem antarmuka distandarisasi ke ekosistem React 18 (selaras dengan `cafe-frontend`).
+- **Hardware & Device Target**:
+  - _HID Barcode Scanner_: Keyboard event listener stream USB/Bluetooth barcode scanner via custom hook.
+  - _Sound Feedback_: Web Audio API native synthesizer (chime/beep transaksi).
 
-### 2.3 Dokumentasi & Knowledge Base (`second-brain/`)
+### 2.3 Dokumentasi & Knowledge Base (`docs/`)
 
-Repositori dilengkapi folder `second-brain/` yang berisi cetak biru komprehensif:
+Repositori dilengkapi folder `docs/` yang berisi cetak biru komprehensif:
 
-- `DOMAIN.md`: Model entitas, skema database, rumus keuangan.
+- `DOMAIN.md`: Model entitas, skema database, rumus keuangan, dan service layer.
 - `CODEMAP.md`: Panduan titik awal perubahan kode per fitur.
 - `API.md`: Kamus endpoint REST API lengkap.
-- `VALUE_PROPOSITION.md`: Analisis pemecahan masalah bisnis F&B.
-- `CODECANYON_SELLING_PLAN.md`: Strategi komersialisasi dan paket distribusi script self-hosted.
 
 ---
 
