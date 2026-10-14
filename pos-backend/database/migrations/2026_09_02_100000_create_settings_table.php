@@ -17,8 +17,8 @@ return new class extends Migration
             $table->string('store_address')->nullable()->default('Jl. Contoh Alamat No. 123');
             $table->string('store_phone')->nullable()->default('0812-3456-7890');
             $table->string('store_email')->nullable();
-            $table->text('receipt_header')->nullable()->default('WARMINDO & CAFE POS');
-            $table->text('receipt_footer')->nullable()->default('Terima kasih atas kunjungan Anda!');
+            $table->text('receipt_header')->nullable();
+            $table->text('receipt_footer')->nullable();
             $table->decimal('default_tax_rate', 5, 2)->default(10.00);
             $table->decimal('service_charge_rate', 5, 2)->default(0.00);
             $table->string('invoice_prefix')->default('INV-');

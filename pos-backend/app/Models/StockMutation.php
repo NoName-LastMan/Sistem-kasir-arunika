@@ -12,6 +12,7 @@ class StockMutation extends Model
     const TYPE_IN     = 'in';
     const TYPE_OUT    = 'out';
     const TYPE_OPNAME = 'opname';
+    const TYPE_SALES  = 'out';
 
     public function product(): BelongsTo
     {

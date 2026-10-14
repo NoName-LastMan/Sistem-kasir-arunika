@@ -30,8 +30,8 @@ class StockForecastingService
         $ingredients = $query->orderBy('name')->get();
         $startDate = Carbon::today()->subDays(self::HISTORICAL_DAYS)->startOfDay();
 
-        // Agregasi konsumsi harian bahan baku dari mutasi bertipe 'sales'
-        $mutations = StockMutation::where('type', StockMutation::TYPE_SALES)
+        // Agregasi konsumsi harian bahan baku dari mutasi bertipe 'sales' / 'out'
+        $mutations = StockMutation::whereIn('type', [StockMutation::TYPE_SALES, 'out'])
             ->whereNotNull('ingredient_id')
             ->where('created_at', '>=', $startDate)
             ->when($ingredientId, fn($q) => $q->where('ingredient_id', $ingredientId))
@@ -55,7 +55,7 @@ class StockForecastingService
      */
     private function calculateMetrics(Ingredient $ingredient, Collection $dailyLogs, bool $isExecutive): array
     {
-        $currentStock = (float) $ingredient->current_stock;
+        $currentStock = (float) ($ingredient->current_stock ?? $ingredient->stock_quantity ?? 0);
         $costPerUnit = (float) ($ingredient->cost_per_unit ?? 0);
 
         // Petakan konsumsi harian 28 hari terakhir
@@ -121,6 +121,7 @@ class StockForecastingService
         $result = [
             'ingredient_id'           => $ingredient->id,
             'name'                    => $ingredient->name,
+            'ingredient_name'         => $ingredient->name,
             'unit'                    => $ingredient->unit,
             'current_stock'           => $currentStock,
             'min_stock_alert'         => (float) $ingredient->min_stock_alert,

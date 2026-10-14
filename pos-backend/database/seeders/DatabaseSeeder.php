@@ -14,115 +14,216 @@ use App\Models\Shift;
 use App\Models\StockMutation;
 use App\Models\Table;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         // 1. Master Data
-        $this->seedUsers();
+        $users = $this->seedUsers();
         $this->seedSettings();
         $categories = $this->seedCategories();
         $modifierGroups = $this->seedModifiers();
         $products = $this->seedProducts($categories, $modifierGroups);
         $this->seedTables();
 
-        // 2. Data Transaksi 30 Hari
-        $cashiers = User::where('role', 'cashier')->get();
-        $this->seedOrdersAndShifts($products, $cashiers, $modifierGroups);
+        // 2. Data Transaksi & Shift (30 Hari)
+        $this->seedOrdersAndShifts($products, $users, $modifierGroups);
 
-        // 3. Bahan Baku, Resep, Waste & Stock Mutations
+        // 3. Bahan Baku, Resep (BOM), Waste & Mutasi Stok Bahan
         $this->call(IngredientSeeder::class);
     }
 
-    private function seedUsers(): void
+    private function seedUsers(): array
     {
-        User::updateOrCreate(
+        $owner = User::updateOrCreate(
             ['email' => 'owner@pos.com'],
-            ['name' => 'Pak Budi (Owner/Superadmin)', 'password' => Hash::make('password'), 'role' => 'superadmin', 'is_active' => true]
+            [
+                'name'      => 'Pak Budi Santoso',
+                'password'  => Hash::make('password'),
+                'role'      => 'superadmin',
+                'is_active' => true,
+            ]
         );
-        User::updateOrCreate(
+
+        $admin = User::updateOrCreate(
             ['email' => 'admin@pos.com'],
-            ['name' => 'Andi (Admin Gudang)', 'password' => Hash::make('password'), 'role' => 'admin', 'is_active' => true]
+            [
+                'name'      => 'Andi Prasetyo',
+                'password'  => Hash::make('password'),
+                'role'      => 'admin',
+                'is_active' => true,
+            ]
         );
-        User::updateOrCreate(
+
+        $kasir1 = User::updateOrCreate(
             ['email' => 'kasir@pos.com'],
-            ['name' => 'Rina (Kasir Utama)', 'password' => Hash::make('password'), 'role' => 'cashier', 'is_active' => true]
+            [
+                'name'      => 'Rina Wulandari',
+                'password'  => Hash::make('password'),
+                'role'      => 'cashier',
+                'is_active' => true,
+            ]
         );
-        User::updateOrCreate(
+
+        $kasir2 = User::updateOrCreate(
             ['email' => 'kasir2@pos.com'],
-            ['name' => 'Dedi (Kasir Siang)', 'password' => Hash::make('password'), 'role' => 'cashier', 'is_active' => true]
+            [
+                'name'      => 'Dedi Kurniawan',
+                'password'  => Hash::make('password'),
+                'role'      => 'cashier',
+                'is_active' => true,
+            ]
         );
-        User::updateOrCreate(
+
+        $kitchen = User::updateOrCreate(
             ['email' => 'kitchen@pos.com'],
-            ['name' => 'Chef Budi (Koki Dapur)', 'password' => Hash::make('password'), 'role' => 'kitchen', 'is_active' => true]
+            [
+                'name'      => 'Mas Agus',
+                'password'  => Hash::make('password'),
+                'role'      => 'kitchen',
+                'is_active' => true,
+            ]
         );
+
+        return [
+            'owner'   => $owner,
+            'admin'   => $admin,
+            'kasir1'  => $kasir1,
+            'kasir2'  => $kasir2,
+            'kitchen' => $kitchen,
+        ];
     }
 
     private function seedSettings(): void
     {
-        Setting::firstOrCreate([], [
-            'store_name'          => 'Arunika Coffee and Space',
-            'store_address'       => 'Lt. 2 Gedung Unimus Mart, Jl. Kedungmundu No. 18, Semarang',
-            'store_phone'         => '0889-8572-2088',
-            'receipt_header'      => 'ARUNIKA COFFEE & SPACE UNIMUS',
-            'receipt_footer'      => 'Terima kasih telah berkunjung ke Arunika Coffee and Space UNIMUS!',
-            'default_tax_rate'    => 10.00,
-            'service_charge_rate' => 0.00,
-            'invoice_prefix'      => 'INV-',
-        ]);
+        Setting::updateOrCreate(
+            ['id' => 1],
+            [
+                'store_name'          => 'Arunika Coffee and Space',
+                'store_address'       => 'Lt. 2 Gedung Unimus Mart, Jl. Kedungmundu No. 18, Semarang',
+                'store_phone'         => '0889-8572-2088',
+                'receipt_header'      => 'ARUNIKA COFFEE & SPACE',
+                'receipt_footer'      => 'Terima kasih! Follow IG @arunika.coffee',
+                'default_tax_rate'    => 10.00,
+                'service_charge_rate' => 0.00,
+                'invoice_prefix'      => 'ARN-',
+            ]
+        );
     }
 
     private function seedCategories(): array
     {
         return [
-            'warmindo' => Category::updateOrCreate(['slug' => 'warmindo-indomie'], ['name' => 'Warmindo & Mie', 'is_active' => true]),
-            'coffee'   => Category::updateOrCreate(['slug' => 'coffee-specialty'], ['name' => 'Kopi & Latte', 'is_active' => true]),
-            'cold'     => Category::updateOrCreate(['slug' => 'non-coffee'], ['name' => 'Minuman Dingin', 'is_active' => true]),
-            'snack'    => Category::updateOrCreate(['slug' => 'snack'], ['name' => 'Snack & Gorengan', 'is_active' => true]),
+            'warmindo' => Category::updateOrCreate(
+                ['slug' => 'warmindo'],
+                ['name' => 'Warmindo & Mie', 'is_active' => true]
+            ),
+            'coffee' => Category::updateOrCreate(
+                ['slug' => 'coffee'],
+                ['name' => 'Kopi', 'is_active' => true]
+            ),
+            'non-coffee' => Category::updateOrCreate(
+                ['slug' => 'non-coffee'],
+                ['name' => 'Non-Coffee', 'is_active' => true]
+            ),
+            'bottled' => Category::updateOrCreate(
+                ['slug' => 'bottled'],
+                ['name' => 'Minuman Botol', 'is_active' => true]
+            ),
+            'snack' => Category::updateOrCreate(
+                ['slug' => 'snack'],
+                ['name' => 'Snack & Cemilan', 'is_active' => true]
+            ),
         ];
     }
 
     private function seedModifiers(): array
     {
+        // 1. Topping Mie
         $toppingGroup = ModifierGroup::firstOrCreate(
-            ['name' => 'Pilihan Topping'],
-            ['is_required' => false, 'min_selection' => 0, 'max_selection' => 5]
+            ['name' => 'Pilihan Topping Mie'],
+            [
+                'is_required'   => false,
+                'min_selection' => 0,
+                'max_selection' => 5,
+            ]
         );
+
         $toppings = [
             ['name' => 'Telur Ceplok', 'price' => 4000],
             ['name' => 'Telur Dadar', 'price' => 4000],
-            ['name' => 'Kornet Sapi', 'price' => 5000],
+            ['name' => 'Kornet', 'price' => 5000],
             ['name' => 'Keju Parut', 'price' => 3000],
-            ['name' => 'Sosis Ayam', 'price' => 5000],
+            ['name' => 'Sosis', 'price' => 5000],
+            ['name' => 'Bakso 3pcs', 'price' => 5000],
         ];
         foreach ($toppings as $t) {
-            ModifierItem::firstOrCreate(['modifier_group_id' => $toppingGroup->id, 'name' => $t['name']], ['price' => $t['price']]);
+            ModifierItem::firstOrCreate(
+                ['modifier_group_id' => $toppingGroup->id, 'name' => $t['name']],
+                ['price' => $t['price']]
+            );
         }
 
+        // 2. Level Gula
         $sugarGroup = ModifierGroup::firstOrCreate(
             ['name' => 'Level Gula'],
-            ['is_required' => true, 'min_selection' => 1, 'max_selection' => 1]
+            [
+                'is_required'   => true,
+                'min_selection' => 1,
+                'max_selection' => 1,
+            ]
         );
-        foreach (['Normal Sugar', 'Less Sugar', 'No Sugar'] as $s) {
-            ModifierItem::firstOrCreate(['modifier_group_id' => $sugarGroup->id, 'name' => $s], ['price' => 0]);
+        foreach (['Normal', 'Less Sugar', 'No Sugar'] as $s) {
+            ModifierItem::firstOrCreate(
+                ['modifier_group_id' => $sugarGroup->id, 'name' => $s],
+                ['price' => 0]
+            );
         }
 
+        // 3. Ukuran Cup
         $sizeGroup = ModifierGroup::firstOrCreate(
-            ['name' => 'Ukuran'],
-            ['is_required' => true, 'min_selection' => 1, 'max_selection' => 1]
+            ['name' => 'Ukuran Cup'],
+            [
+                'is_required'   => true,
+                'min_selection' => 1,
+                'max_selection' => 1,
+            ]
         );
-        ModifierItem::firstOrCreate(['modifier_group_id' => $sizeGroup->id, 'name' => 'Regular'], ['price' => 0]);
-        ModifierItem::firstOrCreate(['modifier_group_id' => $sizeGroup->id, 'name' => 'Large (+Rp3.000)'], ['price' => 3000]);
-        ModifierItem::firstOrCreate(['modifier_group_id' => $sizeGroup->id, 'name' => 'Jumbo (+Rp5.000)'], ['price' => 5000]);
+        ModifierItem::firstOrCreate(
+            ['modifier_group_id' => $sizeGroup->id, 'name' => 'Regular'],
+            ['price' => 0]
+        );
+        ModifierItem::firstOrCreate(
+            ['modifier_group_id' => $sizeGroup->id, 'name' => 'Large +Rp4.000'],
+            ['price' => 4000]
+        );
+
+        // 4. Level Es
+        $iceGroup = ModifierGroup::firstOrCreate(
+            ['name' => 'Level Es'],
+            [
+                'is_required'   => true,
+                'min_selection' => 1,
+                'max_selection' => 1,
+            ]
+        );
+        foreach (['Normal Ice', 'Less Ice', 'No Ice'] as $ice) {
+            ModifierItem::firstOrCreate(
+                ['modifier_group_id' => $iceGroup->id, 'name' => $ice],
+                ['price' => 0]
+            );
+        }
 
         return [
             'topping' => $toppingGroup,
             'sugar'   => $sugarGroup,
             'size'    => $sizeGroup,
+            'ice'     => $iceGroup,
         ];
     }
 
@@ -130,87 +231,249 @@ class DatabaseSeeder extends Seeder
     {
         $products = [];
 
-        // Warmindo
-        $warmindoItems = [
-            ['sku' => 'IND-GRG-01', 'name' => 'Indomie Goreng Spesial', 'price' => 10000, 'cost' => 5500, 'stock' => 150, 'mod' => 'topping'],
-            ['sku' => 'IND-REBUS-01', 'name' => 'Indomie Rebus Spesial', 'price' => 10000, 'cost' => 5500, 'stock' => 150, 'mod' => 'topping'],
-            ['sku' => 'MIE-AYAM-01', 'name' => 'Mie Ayam Jamur', 'price' => 15000, 'cost' => 7000, 'stock' => 100, 'mod' => 'topping'],
-            ['sku' => 'MIE-GODOK-01', 'name' => 'Mie Godog Jawa', 'price' => 12000, 'cost' => 6000, 'stock' => 100, 'mod' => 'topping'],
-            ['sku' => 'NAS-GORENG-01', 'name' => 'Nasi Goreng Kampung', 'price' => 13000, 'cost' => 6500, 'stock' => 100, 'mod' => 'topping'],
-        ];
-        foreach ($warmindoItems as $item) {
-            $products[$item['sku']] = Product::firstOrCreate(
-                ['sku' => $item['sku']],
-                [
-                    'category_id' => $cats['warmindo']->id,
-                    'name'        => $item['name'],
-                    'price'       => $item['price'],
-                    'cost_price'  => $item['cost'],
-                    'stock'       => $item['stock'],
-                    'track_stock' => true,
-                    'is_active'   => true,
-                ]
-            );
-            $products[$item['sku']]->modifierGroups()->syncWithoutDetaching([$mods['topping']->id]);
-        }
+        $menuList = [
+            // Warmindo & Mie
+            [
+                'category'    => 'warmindo',
+                'sku'         => 'WMD-IND-GRG',
+                'name'        => 'Indomie Goreng',
+                'price'       => 8000,
+                'cost'        => 4000,
+                'stock'       => 150,
+                'modifiers'   => ['topping'],
+            ],
+            [
+                'category'    => 'warmindo',
+                'sku'         => 'WMD-IND-RBS',
+                'name'        => 'Indomie Rebus',
+                'price'       => 8000,
+                'cost'        => 4000,
+                'stock'       => 120,
+                'modifiers'   => ['topping'],
+            ],
+            [
+                'category'    => 'warmindo',
+                'sku'         => 'WMD-IND-DBL',
+                'name'        => 'Indomie Goreng Double',
+                'price'       => 12000,
+                'cost'        => 7500,
+                'stock'       => 100,
+                'modifiers'   => ['topping'],
+            ],
+            [
+                'category'    => 'warmindo',
+                'sku'         => 'WMD-MIE-JAWA',
+                'name'        => 'Mie Goreng Jawa',
+                'price'       => 12000,
+                'cost'        => 6000,
+                'stock'       => 90,
+                'modifiers'   => ['topping'],
+            ],
+            [
+                'category'    => 'warmindo',
+                'sku'         => 'WMD-NAS-GRG',
+                'name'        => 'Nasi Goreng Spesial',
+                'price'       => 15000,
+                'cost'        => 7000,
+                'stock'       => 90,
+                'modifiers'   => ['topping'],
+            ],
+            [
+                'category'    => 'warmindo',
+                'sku'         => 'WMD-NAS-TLR',
+                'name'        => 'Nasi Telur',
+                'price'       => 8000,
+                'cost'        => 4500,
+                'stock'       => 80,
+                'modifiers'   => [],
+            ],
 
-        // Coffee
-        $coffeeItems = [
-            ['sku' => 'KPS-AREN-01', 'name' => 'Kopi Susu Gula Aren', 'price' => 18000, 'cost' => 7000, 'stock' => 80, 'mod' => 'sugar'],
-            ['sku' => 'KPS-VAN-01', 'name' => 'Kopi Susu Vanilla', 'price' => 19000, 'cost' => 7500, 'stock' => 80, 'mod' => 'sugar'],
-            ['sku' => 'AMERICANO-01', 'name' => 'Americano', 'price' => 15000, 'cost' => 4000, 'stock' => 100, 'mod' => 'size'],
-            ['sku' => 'CAPPUCINO-01', 'name' => 'Cappuccino', 'price' => 17000, 'cost' => 5500, 'stock' => 80, 'mod' => 'size'],
-            ['sku' => 'MATCHA-01', 'name' => 'Matcha Latte', 'price' => 20000, 'cost' => 8000, 'stock' => 60, 'mod' => 'size'],
-        ];
-        foreach ($coffeeItems as $item) {
-            $products[$item['sku']] = Product::firstOrCreate(
-                ['sku' => $item['sku']],
-                [
-                    'category_id' => $cats['coffee']->id,
-                    'name'        => $item['name'],
-                    'price'       => $item['price'],
-                    'cost_price'  => $item['cost'],
-                    'stock'       => $item['stock'],
-                    'track_stock' => true,
-                    'is_active'   => true,
-                ]
-            );
-            $products[$item['sku']]->modifierGroups()->syncWithoutDetaching([$mods[$item['mod']]->id]);
-        }
+            // Kopi
+            [
+                'category'    => 'coffee',
+                'sku'         => 'KOP-SUSU-ARN',
+                'name'        => 'Kopi Susu Gula Aren',
+                'price'       => 15000,
+                'cost'        => 5500,
+                'stock'       => 140,
+                'modifiers'   => ['sugar', 'size', 'ice'],
+            ],
+            [
+                'category'    => 'coffee',
+                'sku'         => 'KOP-SUSU-VAN',
+                'name'        => 'Kopi Susu Vanilla',
+                'price'       => 16000,
+                'cost'        => 6000,
+                'stock'       => 100,
+                'modifiers'   => ['sugar', 'size', 'ice'],
+            ],
+            [
+                'category'    => 'coffee',
+                'sku'         => 'KOP-SUSU-HZL',
+                'name'        => 'Kopi Susu Hazelnut',
+                'price'       => 17000,
+                'cost'        => 6500,
+                'stock'       => 100,
+                'modifiers'   => ['sugar', 'size', 'ice'],
+            ],
+            [
+                'category'    => 'coffee',
+                'sku'         => 'KOP-AMERICANO',
+                'name'        => 'Americano',
+                'price'       => 12000,
+                'cost'        => 3500,
+                'stock'       => 80,
+                'modifiers'   => ['size', 'ice'],
+            ],
+            [
+                'category'    => 'coffee',
+                'sku'         => 'KOP-CAPPUCCINO',
+                'name'        => 'Cappuccino',
+                'price'       => 15000,
+                'cost'        => 5000,
+                'stock'       => 80,
+                'modifiers'   => ['size'],
+            ],
+            [
+                'category'    => 'coffee',
+                'sku'         => 'KOP-V60-BREW',
+                'name'        => 'V60 Manual Brew',
+                'price'       => 18000,
+                'cost'        => 7000,
+                'stock'       => 50,
+                'modifiers'   => [],
+            ],
+            [
+                'category'    => 'coffee',
+                'sku'         => 'KOP-ESPRESSO',
+                'name'        => 'Espresso',
+                'price'       => 10000,
+                'cost'        => 3000,
+                'stock'       => 60,
+                'modifiers'   => [],
+            ],
 
-        // Cold Drinks
-        $coldItems = [
-            ['sku' => 'ES-TEH-01', 'name' => 'Es Teh Manis Jumbo', 'price' => 5000, 'cost' => 1200, 'stock' => 200],
-            ['sku' => 'ES-JERUK-01', 'name' => 'Es Jeruk Segar', 'price' => 8000, 'cost' => 3000, 'stock' => 100],
-            ['sku' => 'ES-LEMON-01', 'name' => 'Es Lemon Tea', 'price' => 7000, 'cost' => 2500, 'stock' => 100],
-            ['sku' => 'ES-KELAPA-01', 'name' => 'Es Kelapa Muda', 'price' => 10000, 'cost' => 4000, 'stock' => 50],
-        ];
-        foreach ($coldItems as $item) {
-            $products[$item['sku']] = Product::firstOrCreate(
-                ['sku' => $item['sku']],
-                [
-                    'category_id' => $cats['cold']->id,
-                    'name'        => $item['name'],
-                    'price'       => $item['price'],
-                    'cost_price'  => $item['cost'],
-                    'stock'       => $item['stock'],
-                    'track_stock' => true,
-                    'is_active'   => true,
-                ]
-            );
-        }
+            // Non-Coffee
+            [
+                'category'    => 'non-coffee',
+                'sku'         => 'NCF-MATCHA',
+                'name'        => 'Matcha Latte',
+                'price'       => 18000,
+                'cost'        => 7500,
+                'stock'       => 90,
+                'modifiers'   => ['sugar', 'size', 'ice'],
+            ],
+            [
+                'category'    => 'non-coffee',
+                'sku'         => 'NCF-COKLAT',
+                'name'        => 'Coklat',
+                'price'       => 15000,
+                'cost'        => 5500,
+                'stock'       => 100,
+                'modifiers'   => ['sugar', 'size', 'ice'],
+            ],
+            [
+                'category'    => 'non-coffee',
+                'sku'         => 'NCF-TARO',
+                'name'        => 'Taro Latte',
+                'price'       => 16000,
+                'cost'        => 6000,
+                'stock'       => 80,
+                'modifiers'   => ['sugar', 'size', 'ice'],
+            ],
+            [
+                'category'    => 'non-coffee',
+                'sku'         => 'NCF-ES-TEH',
+                'name'        => 'Es Teh Manis',
+                'price'       => 5000,
+                'cost'        => 1200,
+                'stock'       => 200,
+                'modifiers'   => [],
+            ],
+            [
+                'category'    => 'non-coffee',
+                'sku'         => 'NCF-ES-JERUK',
+                'name'        => 'Es Jeruk',
+                'price'       => 7000,
+                'cost'        => 2500,
+                'stock'       => 100,
+                'modifiers'   => [],
+            ],
+            [
+                'category'    => 'non-coffee',
+                'sku'         => 'NCF-LEMON-TEA',
+                'name'        => 'Lemon Tea',
+                'price'       => 8000,
+                'cost'        => 3000,
+                'stock'       => 90,
+                'modifiers'   => ['sugar', 'ice'],
+            ],
 
-        // Snacks
-        $snackItems = [
-            ['sku' => 'GORENGAN-01', 'name' => 'Gorengan Campur (4pc)', 'price' => 5000, 'cost' => 2500, 'stock' => 100],
-            ['sku' => 'KENTANG-01', 'name' => 'Kentang Goreng', 'price' => 12000, 'cost' => 5000, 'stock' => 50],
-            ['sku' => 'RISOL-01', 'name' => 'Risol Mayo (3pc)', 'price' => 10000, 'cost' => 4500, 'stock' => 40],
+            // Minuman Botol
+            [
+                'category'    => 'bottled',
+                'sku'         => 'BTL-AQUA-600',
+                'name'        => 'Aqua 600ml',
+                'price'       => 5000,
+                'cost'        => 2500,
+                'stock'       => 120,
+                'modifiers'   => [],
+            ],
+            [
+                'category'    => 'bottled',
+                'sku'         => 'BTL-TEH-PUCUK',
+                'name'        => 'Teh Pucuk',
+                'price'       => 5000,
+                'cost'        => 3000,
+                'stock'       => 110,
+                'modifiers'   => [],
+            ],
+            [
+                'category'    => 'bottled',
+                'sku'         => 'BTL-COCA-COLA',
+                'name'        => 'Coca Cola',
+                'price'       => 7000,
+                'cost'        => 4500,
+                'stock'       => 70,
+                'modifiers'   => [],
+            ],
+
+            // Snack & Cemilan
+            [
+                'category'    => 'snack',
+                'sku'         => 'SNK-KENTANG',
+                'name'        => 'Kentang Goreng',
+                'price'       => 12000,
+                'cost'        => 5000,
+                'stock'       => 90,
+                'modifiers'   => [],
+            ],
+            [
+                'category'    => 'snack',
+                'sku'         => 'SNK-RISOL-MAYO',
+                'name'        => 'Risol Mayo 3pcs',
+                'price'       => 8000,
+                'cost'        => 3500,
+                'stock'       => 80,
+                'modifiers'   => [],
+            ],
+            [
+                'category'    => 'snack',
+                'sku'         => 'SNK-ROTI-BAKAR',
+                'name'        => 'Roti Bakar Coklat Keju',
+                'price'       => 10000,
+                'cost'        => 4500,
+                'stock'       => 70,
+                'modifiers'   => [],
+            ],
         ];
-        foreach ($snackItems as $item) {
-            $products[$item['sku']] = Product::firstOrCreate(
+
+        foreach ($menuList as $item) {
+            $catId = $cats[$item['category']]->id;
+            $product = Product::updateOrCreate(
                 ['sku' => $item['sku']],
                 [
-                    'category_id' => $cats['snack']->id,
+                    'category_id' => $catId,
                     'name'        => $item['name'],
                     'price'       => $item['price'],
                     'cost_price'  => $item['cost'],
@@ -219,6 +482,18 @@ class DatabaseSeeder extends Seeder
                     'is_active'   => true,
                 ]
             );
+
+            $modGroupIds = [];
+            foreach ($item['modifiers'] as $mKey) {
+                if (isset($mods[$mKey])) {
+                    $modGroupIds[] = $mods[$mKey]->id;
+                }
+            }
+            if (! empty($modGroupIds)) {
+                $product->modifierGroups()->syncWithoutDetaching($modGroupIds);
+            }
+
+            $products[$item['sku']] = $product;
         }
 
         return $products;
@@ -226,195 +501,566 @@ class DatabaseSeeder extends Seeder
 
     private function seedTables(): void
     {
-        for ($i = 1; $i <= 10; $i++) {
-            Table::firstOrCreate(
-                ['table_number' => sprintf('M%02d', $i)],
-                ['capacity' => ($i <= 4) ? 2 : (($i <= 8) ? 4 : 6), 'status' => 'available']
-            );
+        $hasLocation = Schema::hasColumn('tables', 'location');
+
+        // M01 - M04: kapasitas 2 (meja kecil)
+        for ($i = 1; $i <= 4; $i++) {
+            $data = ['capacity' => 2, 'status' => 'available'];
+            if ($hasLocation) {
+                $data['location'] = 'indoor';
+            }
+            Table::updateOrCreate(['table_number' => sprintf('M%02d', $i)], $data);
+        }
+
+        // M05 - M08: kapasitas 4 (meja biasa)
+        for ($i = 5; $i <= 8; $i++) {
+            $data = ['capacity' => 4, 'status' => 'available'];
+            if ($hasLocation) {
+                $data['location'] = 'indoor';
+            }
+            Table::updateOrCreate(['table_number' => sprintf('M%02d', $i)], $data);
+        }
+
+        // M09 - M10: kapasitas 6 (meja besar)
+        for ($i = 9; $i <= 10; $i++) {
+            $data = ['capacity' => 6, 'status' => 'available'];
+            if ($hasLocation) {
+                $data['location'] = 'indoor';
+            }
+            Table::updateOrCreate(['table_number' => sprintf('M%02d', $i)], $data);
+        }
+
+        // L01 - L02: kapasitas 4 (lesehan / outdoor)
+        for ($i = 1; $i <= 2; $i++) {
+            $data = ['capacity' => 4, 'status' => 'available'];
+            if ($hasLocation) {
+                $data['location'] = 'outdoor';
+            }
+            Table::updateOrCreate(['table_number' => sprintf('L%02d', $i)], $data);
         }
     }
 
-    private function seedOrdersAndShifts(array $products, $cashiers, array $mods): void
+    private function seedOrdersAndShifts(array $products, array $users, array $mods): void
     {
-        $productList = array_values($products);
-        $paymentMethods = ['cash', 'cash', 'cash', 'qris', 'transfer', 'card'];
-        $orderTypes = ['dine_in', 'dine_in', 'dine_in', 'takeaway', 'takeaway'];
+        $kasir1 = $users['kasir1']; // Rina Wulandari (shift pagi: 08:00 - 15:00)
+        $kasir2 = $users['kasir2']; // Dedi Kurniawan (shift siang-malam: 15:00 - 22:00)
+        $admin  = $users['admin'];
+
         $tables = Table::pluck('id')->toArray();
+
+        // Ambil item modifier per grup
         $toppingItems = ModifierItem::where('modifier_group_id', $mods['topping']->id)->get();
-        $sugarItems = ModifierItem::where('modifier_group_id', $mods['sugar']->id)->get();
-        $sizeItems = ModifierItem::where('modifier_group_id', $mods['size']->id)->get();
+        $sugarItems   = ModifierItem::where('modifier_group_id', $mods['sugar']->id)->get();
+        $sizeItems    = ModifierItem::where('modifier_group_id', $mods['size']->id)->get();
+        $iceItems     = ModifierItem::where('modifier_group_id', $mods['ice']->id)->get();
 
-        // Seed 30 hari terakhir
-        for ($day = 29; $day >= 0; $day--) {
-            $date = now()->subDays($day);
-            $isWeekend = in_array(now()->subDays($day)->dayOfWeek, [0, 6]);
-            $dailyOrderCount = $isWeekend ? random_int(35, 55) : random_int(20, 40);
+        // Bobot popularitas produk mahasiswa Arunika
+        $productWeights = [
+            'KOP-SUSU-ARN'   => 30, // Most popular coffee
+            'WMD-IND-GRG'    => 28, // Most popular food
+            'NCF-ES-TEH'     => 22, // Most popular cheap drink
+            'WMD-IND-DBL'    => 14,
+            'SNK-KENTANG'    => 14,
+            'WMD-NAS-GRG'    => 13,
+            'SNK-RISOL-MAYO' => 12,
+            'WMD-IND-RBS'    => 12,
+            'WMD-MIE-JAWA'   => 10,
+            'WMD-NAS-TLR'    => 10,
+            'KOP-SUSU-VAN'   => 10,
+            'BTL-AQUA-600'   => 10,
+            'BTL-TEH-PUCUK'  => 10,
+            'NCF-MATCHA'     => 9,
+            'NCF-COKLAT'     => 9,
+            'KOP-SUSU-HZL'   => 8,
+            'NCF-ES-JERUK'   => 8,
+            'SNK-ROTI-BAKAR' => 8,
+            'NCF-LEMON-TEA'  => 7,
+            'NCF-TARO'       => 7,
+            'BTL-COCA-COLA'  => 6,
+            'KOP-AMERICANO'  => 5,
+            'KOP-CAPPUCCINO' => 5,
+            'KOP-V60-BREW'   => 2, // Rare specialty
+            'KOP-ESPRESSO'   => 2, // Rare
+        ];
 
-            // Buka 2 shift per hari
-            foreach ($cashiers as $cashier) {
-                $shiftOpen = now()->subDays($day)->setHours(8)->setMinutes(random_int(0, 5));
-                $shiftClose = now()->subDays($day)->setHours(20)->setMinutes(random_int(0, 5));
-                $startingCash = 200000;
-                $isOpenToday = ($day === 0 && $cashier->email === 'kasir@pos.com');
-
-                $shift = Shift::create([
-                    'user_id'       => $cashier->id,
-                    'opened_at'     => $shiftOpen,
-                    'starting_cash' => $startingCash,
-                    'status'        => $isOpenToday ? 'open' : 'closed',
-                    'closed_at'     => $isOpenToday ? null : $shiftClose,
-                ]);
-
-                $ordersPerCashier = intdiv($dailyOrderCount, $cashiers->count());
-
-                for ($o = 0; $o < $ordersPerCashier; $o++) {
-                    $orderHour = random_int(8, 19);
-                    $orderMinute = random_int(0, 59);
-                    $orderTime = now()->subDays($day)->setHours($orderHour)->setMinutes($orderMinute);
-
-                    $numItems = random_int(1, 4);
-                    $selectedProducts = [];
-                    for ($n = 0; $n < $numItems; $n++) {
-                        $selectedProducts[] = $productList[array_rand($productList)];
-                    }
-
-                    $subtotal = 0;
-                    $orderItemsData = [];
-
-                    foreach ($selectedProducts as $prod) {
-                        $qty = random_int(1, 3);
-                        $itemPrice = (float) $prod->price;
-
-                        // Random modifier
-                        $modifiers = [];
-                        $modifierData = [];
-                        if ($prod->modifierGroups->contains($mods['topping']->id) && rand(1, 3) > 1) {
-                            $randomTopping = $toppingItems->random(rand(1, 2));
-                            foreach ($randomTopping as $top) {
-                                $modifiers[] = ['modifier_item_id' => $top->id, 'unit_price' => $top->price, 'subtotal' => $top->price * $qty];
-                                $modifierData[] = $top;
-                                $itemPrice += (float) $top->price;
-                            }
-                        }
-                        if ($prod->modifierGroups->contains($mods['sugar']->id)) {
-                            $sugar = $sugarItems->random();
-                            $modifiers[] = ['modifier_item_id' => $sugar->id, 'unit_price' => 0, 'subtotal' => 0];
-                        }
-                        if ($prod->modifierGroups->contains($mods['size']->id) && rand(1, 3) > 1) {
-                            $size = $sizeItems->random();
-                            $modifiers[] = ['modifier_item_id' => $size->id, 'unit_price' => $size->price, 'subtotal' => $size->price * $qty];
-                            $itemPrice += (float) $size->price;
-                        }
-
-                        $rowSubtotal = round($itemPrice * $qty, 2);
-                        $subtotal += $rowSubtotal;
-
-                        $orderItemsData[] = [
-                            'product'    => $prod,
-                            'quantity'   => $qty,
-                            'unit_price' => (float) $prod->price,
-                            'subtotal'   => $rowSubtotal,
-                            'modifiers'  => $modifiers,
-                        ];
-                    }
-
-                    // Discount (30% chance)
-                    $discountType = 'none';
-                    $discountValue = 0;
-                    $discountAmount = 0;
-                    if (rand(1, 10) <= 3) {
-                        $discountType = (rand(1, 2) === 1) ? 'percentage' : 'fixed';
-                        $discountValue = ($discountType === 'percentage') ? random_int(5, 15) : random_int(2000, 5000);
-                        $discountAmount = ($discountType === 'percentage')
-                            ? round($subtotal * $discountValue / 100, 2)
-                            : min($subtotal, $discountValue);
-                    }
-
-                    $taxable = max(0, $subtotal - $discountAmount);
-                    $taxAmount = round($taxable * 10 / 100, 2);
-                    $totalAmount = round($taxable + $taxAmount, 2);
-
-                    $paymentMethod = $paymentMethods[array_rand($paymentMethods)];
-                    $cashTendered = null;
-                    $changeDue = null;
-                    if ($paymentMethod === 'cash') {
-                        $cashTendered = $totalAmount + random_int(0, 5) * 1000;
-                        $changeDue = round($cashTendered - $totalAmount, 2);
-                    }
-
-                    $useTable = (in_array($orderTypes[array_rand($orderTypes)], ['dine_in'])) ? $tables[array_rand($tables)] : null;
-
-                    $order = Order::create([
-                        'invoice_number'  => 'INV-' . strtoupper(Str::random(8)),
-                        'user_id'         => $cashier->id,
-                        'shift_id'        => $shift->id,
-                        'table_id'        => $useTable,
-                        'order_type'      => $orderTypes[array_rand($orderTypes)],
-                        'subtotal'        => $subtotal,
-                        'discount_amount' => $discountAmount,
-                        'tax_amount'      => $taxAmount,
-                        'service_charge'  => 0,
-                        'total_amount'    => $totalAmount,
-                        'payment_method'  => $paymentMethod,
-                        'cash_tendered'   => $cashTendered,
-                        'change_due'      => $changeDue,
-                        'payment_status'  => 'paid',
-                        'status'          => 'completed',
-                        'created_at'      => $orderTime,
-                        'updated_at'      => $orderTime,
-                    ]);
-
-                    foreach ($orderItemsData as $itemData) {
-                        $orderItem = $order->items()->create([
-                            'product_id' => $itemData['product']->id,
-                            'quantity'   => $itemData['quantity'],
-                            'unit_price' => $itemData['unit_price'],
-                            'subtotal'   => $itemData['subtotal'],
-                        ]);
-
-                        if (! empty($itemData['modifiers'])) {
-                            $orderItem->modifiers()->createMany($itemData['modifiers']);
-                        }
-
-                        // Deduct stock
-                        if ($itemData['product']->track_stock) {
-                            $stockBefore = (int) $itemData['product']->stock;
-                            $stockAfter = max(0, $stockBefore - $itemData['quantity']);
-                            $itemData['product']->update(['stock' => $stockAfter]);
-                            StockMutation::create([
-                                'product_id'     => $itemData['product']->id,
-                                'user_id'        => $cashier->id,
-                                'type'           => 'out',
-                                'quantity'       => -$itemData['quantity'],
-                                'stock_before'   => $stockBefore,
-                                'stock_after'    => $stockAfter,
-                                'reference_note' => "Penjualan via Order #{$order->invoice_number}",
-                                'created_at'     => $orderTime,
-                                'updated_at'     => $orderTime,
-                            ]);
-                        }
-                    }
-                }
-
-                // Close shift metrics (hanya jika shift berstatus closed)
-                if (! $isOpenToday) {
-                    $shiftOrders = Order::where('shift_id', $shift->id)->where('status', 'completed')->get();
-                    $cashSales = $shiftOrders->where('payment_method', 'cash')->sum('total_amount');
-                    $totalRevenue = $shiftOrders->sum('total_amount');
-
-                    $shift->update([
-                        'expected_cash'   => round($startingCash + $cashSales, 2),
-                        'actual_cash'     => round($startingCash + $cashSales + random_int(-5000, 10000), 2),
-                        'cash_difference' => round(random_int(-5000, 10000), 2),
-                    ]);
+        // Buat weighted product array pool
+        $weightedProductPool = [];
+        foreach ($productWeights as $sku => $weight) {
+            if (isset($products[$sku])) {
+                for ($w = 0; $w < $weight; $w++) {
+                    $weightedProductPool[] = $products[$sku];
                 }
             }
         }
 
-        // Pastikan stok produk tetap mencukupi untuk simulasi kasir
-        foreach ($productList as $p) {
-            if ($p->track_stock && $p->stock < 20) {
-                $p->update(['stock' => random_int(40, 120)]);
+        // Bobot jam kunjungan (08:00 - 22:00)
+        // 11-13 (lunch rush), 16-18 (after-class rush), 08-09 (sepi, cuma kopi)
+        $hourWeights = [
+            8  => 2,
+            9  => 3,
+            10 => 6,
+            11 => 18,
+            12 => 22,
+            13 => 15,
+            14 => 9,
+            15 => 11,
+            16 => 17,
+            17 => 19,
+            18 => 14,
+            19 => 11,
+            20 => 8,
+            21 => 5,
+        ];
+        $hourPool = [];
+        foreach ($hourWeights as $hour => $weight) {
+            for ($h = 0; $h < $weight; $h++) {
+                $hourPool[] = $hour;
+            }
+        }
+
+        // Catatan pelanggan natural untuk mahasiswa
+        $customerNotes = [
+            'warmindo' => [
+                'gak pake sawi',
+                'kuah dipisah ya kak',
+                'extra pedas',
+                'gak pake bawang goreng',
+                'pedas sedang',
+                'sambal dipisah',
+                'telur setengah matang',
+                'telur ceplok matang banget',
+                'jangan terlalu asin',
+            ],
+            'drink' => [
+                'susu oat +5rb',
+                'jangan terlalu manis ya',
+                'less sweet kak',
+                'es sedikit saja',
+                'tanpa sedotan plastik',
+                'gula cair dipisah',
+            ],
+            'snack' => [
+                'mayo dipisah',
+                'saus sambal banyakin kak',
+                'goreng agak garing ya',
+                'bumbu ditabur terpisah',
+            ],
+        ];
+
+        // Rencana void: 3 order di seluruh periode 30 hari (hari ke-23, ke-14, ke-4)
+        $voidSchedule = [
+            23 => ['reason' => 'Salah input menu makanan'],
+            14 => ['reason' => 'Pelanggan batal jadi karena buru-buru kelas'],
+            4  => ['reason' => 'Salah pilih meja dan pembayaran gagal'],
+        ];
+
+        $startingCashAmount = 300000.00;
+
+        // Loop 30 hari (dari H-29 sampai H-0 hari ini)
+        for ($day = 29; $day >= 0; $day--) {
+            $baseDate = Carbon::today()->subDays($day);
+            $isWeekend = in_array($baseDate->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY]);
+            $isToday = ($day === 0);
+
+            // Jumlah order: Weekdays (25-40), Weekends (35-55)
+            // Hari ini jika masih berjalan: 14-20 order pada shift pagi
+            $dailyOrderCount = $isToday
+                ? rand(14, 20)
+                : ($isWeekend ? rand(35, 55) : rand(25, 40));
+
+            // Buka Shift Pagi (Rina: 08:00 - 15:00)
+            $shift1OpenTime = $baseDate->copy()->setTime(8, rand(0, 4), 0);
+            $shift1CloseTime = $baseDate->copy()->setTime(15, rand(0, 5), 0);
+            $isShift1Open = $isToday; // Shift pagi hari ini berstatus 'open'
+
+            $shift1 = Shift::create([
+                'user_id'         => $kasir1->id,
+                'opened_at'       => $shift1OpenTime,
+                'closed_at'       => $isShift1Open ? null : $shift1CloseTime,
+                'starting_cash'   => $startingCashAmount,
+                'expected_cash'   => null,
+                'actual_cash'     => null,
+                'cash_difference' => null,
+                'status'          => $isShift1Open ? 'open' : 'closed',
+                'notes'           => $isShift1Open ? null : 'Shift pagi selesai lancar.',
+                'created_at'      => $shift1OpenTime,
+                'updated_at'      => $isShift1Open ? $shift1OpenTime : $shift1CloseTime,
+            ]);
+
+            // Buka Shift Siang-Malam (Dedi: 15:00 - 22:00) - hanya jika bukan hari ini pagi
+            $shift2 = null;
+            if (! $isToday) {
+                $shift2OpenTime = $baseDate->copy()->setTime(15, rand(0, 4), 0);
+                $shift2CloseTime = $baseDate->copy()->setTime(22, rand(0, 8), 0);
+
+                $shift2 = Shift::create([
+                    'user_id'         => $kasir2->id,
+                    'opened_at'       => $shift2OpenTime,
+                    'closed_at'       => $shift2CloseTime,
+                    'starting_cash'   => $startingCashAmount,
+                    'expected_cash'   => null,
+                    'actual_cash'     => null,
+                    'cash_difference' => null,
+                    'status'          => 'closed',
+                    'notes'           => 'Shift malam tutup kasir klop.',
+                    'created_at'      => $shift2OpenTime,
+                    'updated_at'      => $shift2CloseTime,
+                ]);
+            }
+
+            // Generate order times for today or past days
+            $generatedOrders = [];
+            for ($o = 0; $o < $dailyOrderCount; $o++) {
+                if ($isToday) {
+                    // Hanya jam 08:00 sampai 14:00 untuk shift pagi hari ini
+                    $hour = rand(8, 14);
+                } else {
+                    $hour = $hourPool[array_rand($hourPool)];
+                }
+                $minute = rand(0, 59);
+                $second = rand(0, 59);
+
+                $orderTime = $baseDate->copy()->setTime($hour, $minute, $second);
+                $generatedOrders[] = $orderTime;
+            }
+
+            // Urutkan order berdasarkan waktu agar nomor invoice sekuensial kronologis
+            usort($generatedOrders, fn($a, $b) => $a->timestamp <=> $b->timestamp);
+
+            $dailyInvoiceCounter = 1;
+
+            foreach ($generatedOrders as $orderIndex => $orderTime) {
+                $hour = $orderTime->hour;
+
+                // Tentukan shift & kasir yang bertugas
+                if ($hour < 15 || ! $shift2) {
+                    $currentCashier = $kasir1;
+                    $currentShift   = $shift1;
+                } else {
+                    $currentCashier = $kasir2;
+                    $currentShift   = $shift2;
+                }
+
+                // Format invoice number: ARN-YYYYMMDD-XXXX
+                $invoiceNumber = sprintf('ARN-%s-%04d', $baseDate->format('Ymd'), $dailyInvoiceCounter++);
+
+                // Cek apakah order ini harus di-void
+                $isVoidOrder = (! $isToday && isset($voidSchedule[$day]) && $orderIndex === 5);
+
+                // Ukuran pesanan mahasiswa: 50% 1 item, 35% 2 items, 10% 3 items, 5% 4 items
+                $itemCountRoll = rand(1, 100);
+                if ($itemCountRoll <= 50) {
+                    $itemCount = 1;
+                } elseif ($itemCountRoll <= 85) {
+                    $itemCount = 2;
+                } elseif ($itemCountRoll <= 95) {
+                    $itemCount = 3;
+                } else {
+                    $itemCount = 4;
+                }
+
+                // Pilih produk unik untuk order ini
+                $selectedProducts = [];
+                for ($it = 0; $it < $itemCount; $it++) {
+                    $chosen = $weightedProductPool[array_rand($weightedProductPool)];
+                    $selectedProducts[] = $chosen;
+                }
+
+                $subtotal = 0.0;
+                $lineItemsPayload = [];
+
+                foreach ($selectedProducts as $prod) {
+                    // Mahasiswa umumnya pesan 1 porsi (80%) atau 2 porsi (20%)
+                    $qty = (rand(1, 10) <= 8) ? 1 : 2;
+                    $basePrice = (float) $prod->price;
+                    $itemUnitPrice = $basePrice;
+                    $modifiersData = [];
+
+                    // Catatan pelanggan pada ~15% item
+                    $itemNote = null;
+                    if (rand(1, 100) <= 15) {
+                        if (str_starts_with($prod->sku, 'WMD-')) {
+                            $itemNote = $customerNotes['warmindo'][array_rand($customerNotes['warmindo'])];
+                        } elseif (str_starts_with($prod->sku, 'KOP-') || str_starts_with($prod->sku, 'NCF-')) {
+                            $itemNote = $customerNotes['drink'][array_rand($customerNotes['drink'])];
+                        } elseif (str_starts_with($prod->sku, 'SNK-')) {
+                            $itemNote = $customerNotes['snack'][array_rand($customerNotes['snack'])];
+                        }
+                    }
+
+                    // 1. Topping Mie (Pilihan Topping Mie)
+                    if ($prod->modifierGroups->contains($mods['topping']->id) && rand(1, 10) <= 6) {
+                        $topCount = rand(1, 2);
+                        $chosenToppings = $toppingItems->random($topCount);
+                        foreach ($chosenToppings as $top) {
+                            $modifiersData[] = [
+                                'modifier_item_id' => $top->id,
+                                'unit_price'       => (float) $top->price,
+                                'subtotal'         => round((float) $top->price * $qty, 2),
+                            ];
+                            $itemUnitPrice += (float) $top->price;
+                        }
+                    }
+
+                    // 2. Level Gula (Minuman Kopi & Non-Coffee tertentu)
+                    if ($prod->modifierGroups->contains($mods['sugar']->id)) {
+                        // 70% Normal, 20% Less Sugar, 10% No Sugar
+                        $sugarRoll = rand(1, 10);
+                        $sugarItem = ($sugarRoll <= 7)
+                            ? $sugarItems->firstWhere('name', 'Normal')
+                            : (($sugarRoll <= 9) ? $sugarItems->firstWhere('name', 'Less Sugar') : $sugarItems->firstWhere('name', 'No Sugar'));
+
+                        if ($sugarItem) {
+                            $modifiersData[] = [
+                                'modifier_item_id' => $sugarItem->id,
+                                'unit_price'       => 0.0,
+                                'subtotal'         => 0.0,
+                            ];
+                        }
+                    }
+
+                    // 3. Ukuran Cup (Regular Rp0, Large +Rp4.000)
+                    if ($prod->modifierGroups->contains($mods['size']->id)) {
+                        $sizeRoll = rand(1, 10);
+                        $isLarge = ($sizeRoll >= 8); // 30% Large
+                        $sizeItem = $isLarge
+                            ? $sizeItems->firstWhere('name', 'Large +Rp4.000')
+                            : $sizeItems->firstWhere('name', 'Regular');
+
+                        if ($sizeItem) {
+                            $modifiersData[] = [
+                                'modifier_item_id' => $sizeItem->id,
+                                'unit_price'       => (float) $sizeItem->price,
+                                'subtotal'         => round((float) $sizeItem->price * $qty, 2),
+                            ];
+                            $itemUnitPrice += (float) $sizeItem->price;
+                        }
+                    }
+
+                    // 4. Level Es (Normal Ice, Less Ice, No Ice)
+                    if ($prod->modifierGroups->contains($mods['ice']->id)) {
+                        $iceRoll = rand(1, 10);
+                        $iceItem = ($iceRoll <= 7)
+                            ? $iceItems->firstWhere('name', 'Normal Ice')
+                            : (($iceRoll <= 9) ? $iceItems->firstWhere('name', 'Less Ice') : $iceItems->firstWhere('name', 'No Ice'));
+
+                        if ($iceItem) {
+                            $modifiersData[] = [
+                                'modifier_item_id' => $iceItem->id,
+                                'unit_price'       => 0.0,
+                                'subtotal'         => 0.0,
+                            ];
+                        }
+                    }
+
+                    $rowSubtotal = round($itemUnitPrice * $qty, 2);
+                    $subtotal += $rowSubtotal;
+
+                    $lineItemsPayload[] = [
+                        'product'    => $prod,
+                        'quantity'   => $qty,
+                        'unit_price' => $basePrice,
+                        'subtotal'   => $rowSubtotal,
+                        'notes'      => $itemNote,
+                        'modifiers'  => $modifiersData,
+                    ];
+                }
+
+                // Diskon: hanya 10% transaksi yang mendapatkan diskon
+                $discountAmount = 0.0;
+                if (rand(1, 100) <= 10) {
+                    if (rand(1, 2) === 1) {
+                        // member_10: diskon 10% untuk mahasiswa reguler
+                        $discountAmount = round($subtotal * 0.10, 2);
+                    } elseif ($subtotal >= 30000) {
+                        // promo_5k: potongan Rp5.000 untuk pembelian > Rp30.000
+                        $discountAmount = 5000.00;
+                    }
+                }
+
+                $taxableAmount = max(0, $subtotal - $discountAmount);
+                $taxAmount     = round($taxableAmount * 0.10, 2);
+                $totalAmount   = round($taxableAmount + $taxAmount, 2);
+
+                // Metode Pembayaran: 55% QRIS, 30% Cash, 10% Transfer, 5% Card
+                $payRoll = rand(1, 100);
+                if ($payRoll <= 55) {
+                    $paymentMethod = 'qris';
+                } elseif ($payRoll <= 85) {
+                    $paymentMethod = 'cash';
+                } elseif ($payRoll <= 95) {
+                    $paymentMethod = 'transfer';
+                } else {
+                    $paymentMethod = 'card';
+                }
+
+                $cashTendered = null;
+                $changeDue    = null;
+
+                if ($paymentMethod === 'cash') {
+                    // Nominal uang tunai bulat khas Rupiah
+                    if ($totalAmount <= 10000) {
+                        $cashTendered = 10000.00;
+                    } elseif ($totalAmount <= 20000) {
+                        $cashTendered = (rand(1, 2) === 1) ? 20000.00 : 50000.00;
+                    } elseif ($totalAmount <= 50000) {
+                        $cashTendered = (rand(1, 3) <= 2) ? 50000.00 : ceil($totalAmount / 5000) * 5000;
+                    } else {
+                        $cashTendered = 100000.00;
+                    }
+                    if ($cashTendered < $totalAmount) {
+                        $cashTendered = ceil($totalAmount / 10000) * 10000;
+                    }
+                    $changeDue = round($cashTendered - $totalAmount, 2);
+                }
+
+                // Tipe pesanan: 70% dine_in, 25% takeaway (punya meja null), 5% takeaway tanpa meja
+                $typeRoll = rand(1, 100);
+                if ($typeRoll <= 70) {
+                    $orderType = 'dine_in';
+                    $tableId   = ! empty($tables) ? $tables[array_rand($tables)] : null;
+                } else {
+                    $orderType = 'takeaway';
+                    $tableId   = null;
+                }
+
+                // Status order
+                $orderStatus   = $isVoidOrder ? 'cancelled' : 'completed';
+                $paymentStatus = $isVoidOrder ? 'refunded' : 'paid';
+
+                $order = Order::create([
+                    'invoice_number'  => $invoiceNumber,
+                    'user_id'         => $currentCashier->id,
+                    'shift_id'        => $currentShift->id,
+                    'table_id'        => $tableId,
+                    'order_type'      => $orderType,
+                    'subtotal'        => $subtotal,
+                    'discount_amount' => $discountAmount,
+                    'tax_amount'      => $taxAmount,
+                    'service_charge'  => 0.00,
+                    'total_amount'    => $totalAmount,
+                    'payment_method'  => $paymentMethod,
+                    'cash_tendered'   => $cashTendered,
+                    'change_due'      => $changeDue,
+                    'payment_status'  => $paymentStatus,
+                    'status'          => $orderStatus,
+                    'void_reason'     => $isVoidOrder ? $voidSchedule[$day]['reason'] : null,
+                    'voided_at'       => $isVoidOrder ? $orderTime->copy()->addMinutes(rand(3, 15)) : null,
+                    'voided_by'       => $isVoidOrder ? $currentCashier->id : null,
+                    'created_at'      => $orderTime,
+                    'updated_at'      => $isVoidOrder ? $orderTime->copy()->addMinutes(rand(3, 15)) : $orderTime,
+                ]);
+
+                // Buat item pesanan & mutasi stok produk (jika order tidak di-void)
+                foreach ($lineItemsPayload as $line) {
+                    $orderItem = OrderItem::create([
+                        'order_id'   => $order->id,
+                        'product_id' => $line['product']->id,
+                        'quantity'   => $line['quantity'],
+                        'unit_price' => $line['unit_price'],
+                        'subtotal'   => $line['subtotal'],
+                        'notes'      => $line['notes'],
+                        'created_at' => $orderTime,
+                        'updated_at' => $orderTime,
+                    ]);
+
+                    if (! empty($line['modifiers'])) {
+                        foreach ($line['modifiers'] as $mPayload) {
+                            OrderItemModifier::create([
+                                'order_item_id'    => $orderItem->id,
+                                'modifier_item_id' => $mPayload['modifier_item_id'],
+                                'unit_price'       => $mPayload['unit_price'],
+                                'subtotal'         => $mPayload['subtotal'],
+                                'created_at'       => $orderTime,
+                                'updated_at'       => $orderTime,
+                            ]);
+                        }
+                    }
+
+                    // Catat mutasi stok produk keluar hanya jika order selesai
+                    if (! $isVoidOrder && $line['product']->track_stock) {
+                        $stockBefore = (int) $line['product']->stock;
+                        $stockAfter  = max(0, $stockBefore - $line['quantity']);
+                        $line['product']->stock = $stockAfter;
+                        $line['product']->update(['stock' => $stockAfter]);
+
+                        StockMutation::create([
+                            'product_id'     => $line['product']->id,
+                            'ingredient_id'  => null,
+                            'user_id'        => $currentCashier->id,
+                            'type'           => StockMutation::TYPE_OUT,
+                            'quantity'       => -$line['quantity'],
+                            'stock_before'   => $stockBefore,
+                            'stock_after'    => $stockAfter,
+                            'reference_type' => 'order',
+                            'reference_id'   => $order->id,
+                            'reference_note' => "Penjualan via Order #{$order->invoice_number}",
+                            'created_at'     => $orderTime,
+                            'updated_at'     => $orderTime,
+                        ]);
+                    }
+                }
+            }
+
+            // Hitung rekonsiliasi kas untuk shift yang sudah ditutup
+            // Shift 1 (Rina) jika bukan hari ini
+            if (! $isShift1Open) {
+                $shift1CashSales = Order::where('shift_id', $shift1->id)
+                    ->where('status', 'completed')
+                    ->where('payment_method', 'cash')
+                    ->sum('total_amount');
+
+                $expected1 = round($startingCashAmount + (float) $shift1CashSales, 2);
+                $humanDiff1 = rand(-3, 3) * 1000; // ±Rp1.000 - Rp3.000
+                $actual1 = round($expected1 + $humanDiff1, 2);
+
+                $shift1->update([
+                    'expected_cash'   => $expected1,
+                    'actual_cash'     => $actual1,
+                    'cash_difference' => $humanDiff1,
+                ]);
+            }
+
+            // Shift 2 (Dedi)
+            if ($shift2) {
+                $shift2CashSales = Order::where('shift_id', $shift2->id)
+                    ->where('status', 'completed')
+                    ->where('payment_method', 'cash')
+                    ->sum('total_amount');
+
+                $expected2 = round($startingCashAmount + (float) $shift2CashSales, 2);
+                $humanDiff2 = rand(-4, 4) * 1000; // ±Rp2.000 - Rp4.000
+                $actual2 = round($expected2 + $humanDiff2, 2);
+
+                $shift2->update([
+                    'expected_cash'   => $expected2,
+                    'actual_cash'     => $actual2,
+                    'cash_difference' => $humanDiff2,
+                ]);
+            }
+        }
+
+        // Restock produk agar sisa stok berada di level yang ideal (40-120) untuk demo POS
+        foreach ($products as $p) {
+            if ($p->track_stock && $p->stock < 40) {
+                $restockQty = rand(60, 110);
+                $stockBefore = (int) $p->stock;
+                $stockAfter  = $stockBefore + $restockQty;
+                $p->update(['stock' => $stockAfter]);
+
+                StockMutation::create([
+                    'product_id'     => $p->id,
+                    'ingredient_id'  => null,
+                    'user_id'        => $admin->id,
+                    'type'           => StockMutation::TYPE_IN,
+                    'quantity'       => $restockQty,
+                    'stock_before'   => $stockBefore,
+                    'stock_after'    => $stockAfter,
+                    'reference_type' => 'supplier',
+                    'reference_note' => 'Restock berkala master produk untuk operasional demo Arunika',
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
             }
         }
     }

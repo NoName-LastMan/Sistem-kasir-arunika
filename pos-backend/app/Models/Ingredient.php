@@ -10,6 +10,27 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Ingredient extends Model
 {
     protected $guarded = ['id'];
+    protected $appends = ['unit', 'stock', 'minimum_stock', 'current_stock'];
+
+    public function getUnitAttribute(): ?string
+    {
+        return $this->base_unit;
+    }
+
+    public function getStockAttribute(): ?float
+    {
+        return (float) $this->stock_quantity;
+    }
+
+    public function getCurrentStockAttribute(): ?float
+    {
+        return (float) $this->stock_quantity;
+    }
+
+    public function getMinimumStockAttribute(): ?float
+    {
+        return (float) $this->min_stock_alert;
+    }
 
     protected function casts(): array
     {

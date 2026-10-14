@@ -25,10 +25,15 @@ use App\Http\Middleware\EnsureSuperAdmin;
 
 use Illuminate\Support\Facades\Route;
 
-// Public route
+// Public routes untuk otentikasi staf & aplikasi tamu self-order (cafe-frontend)
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/public/settings', [SettingController::class, 'showPublic']);
+Route::get('/public/menu', [ProductController::class, 'publicMenu']);
+Route::get('/public/tables/{code}', [AdminTableController::class, 'publicValidateTable']);
+Route::post('/public/orders', [OrderController::class, 'publicCreateOrder']);
+Route::get('/public/orders/{id}/status', [OrderController::class, 'publicOrderStatus']);
 
-// Protected routes (Kasir & Admin)
+// Protected routes (Kasir, Koki, Admin, Owner)
 Route::middleware('auth:sanctum')->group(function () {
     // Auth & Profil
     Route::get('/me', [AuthController::class, 'me']);
@@ -45,9 +50,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/products/by-barcode/{code}', [ProductController::class, 'byBarcode']);
     Route::get('/products/{product}', [ProductController::class, 'show']);
 
-    // Transaksi POS & Riwayat Order
+    // Transaksi POS, Konfirmasi Kasir, Dapur & Riwayat Order
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);
+    Route::post('/orders/{order}/confirm', [OrderController::class, 'confirm']);
+    Route::post('/orders/{order}/serve', [OrderController::class, 'serve']);
     Route::post('/orders/{order}/void', [OrderController::class, 'void']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
 

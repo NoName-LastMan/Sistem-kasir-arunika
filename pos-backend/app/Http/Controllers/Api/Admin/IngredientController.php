@@ -22,14 +22,31 @@ class IngredientController extends Controller
                 ->where('track_stock', true);
         }
 
+        if ($request->boolean('all') || $request->input('per_page') === 'all') {
+            return response()->json([
+                'message' => 'Daftar semua bahan baku',
+                'data'    => $query->orderBy('name')->get(),
+            ]);
+        }
+
         return response()->json([
             'message' => 'Daftar bahan baku',
-            'data'    => $query->orderBy('name')->paginate($request->input('per_page', 20)),
+            'data'    => $query->orderBy('name')->paginate($request->input('per_page', 50)),
         ]);
     }
 
     public function store(Request $request)
     {
+        if ($request->has('unit') && !$request->has('base_unit')) {
+            $request->merge(['base_unit' => $request->unit]);
+        }
+        if ($request->has('stock') && !$request->has('stock_quantity')) {
+            $request->merge(['stock_quantity' => $request->stock]);
+        }
+        if ($request->has('minimum_stock') && !$request->has('min_stock_alert')) {
+            $request->merge(['min_stock_alert' => $request->minimum_stock]);
+        }
+
         $validated = $request->validate([
             'name'            => 'required|string|max:255',
             'base_unit'       => 'required|string|max:50',
@@ -57,6 +74,16 @@ class IngredientController extends Controller
 
     public function update(Request $request, Ingredient $ingredient)
     {
+        if ($request->has('unit') && !$request->has('base_unit')) {
+            $request->merge(['base_unit' => $request->unit]);
+        }
+        if ($request->has('stock') && !$request->has('stock_quantity')) {
+            $request->merge(['stock_quantity' => $request->stock]);
+        }
+        if ($request->has('minimum_stock') && !$request->has('min_stock_alert')) {
+            $request->merge(['min_stock_alert' => $request->minimum_stock]);
+        }
+
         $validated = $request->validate([
             'name'            => 'sometimes|string|max:255',
             'base_unit'       => 'sometimes|string|max:50',

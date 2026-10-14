@@ -101,4 +101,24 @@ class ProductController extends Controller
             'data'    => $product
         ]);
     }
+
+    /**
+     * Katalog menu publik untuk guest di cafe-frontend.
+     */
+    public function publicMenu()
+    {
+        $categories = \App\Models\Category::all();
+        $products = Product::with(['category', 'modifierGroups.items'])
+            ->where('is_active', true)
+            ->get();
+        $modifierGroups = \App\Models\ModifierGroup::with('items')->get();
+
+        return response()->json([
+            'data' => [
+                'categories'      => $categories,
+                'products'        => $products,
+                'modifier_groups' => $modifierGroups,
+            ]
+        ]);
+    }
 }

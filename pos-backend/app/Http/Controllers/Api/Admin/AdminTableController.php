@@ -59,4 +59,23 @@ class AdminTableController extends Controller
             'message' => 'Meja berhasil dihapus'
         ]);
     }
+
+    /**
+     * Validasi nomor/kode meja dari scan QR di cafe-frontend.
+     */
+    public function publicValidateTable($code)
+    {
+        $table = Table::where('table_number', $code)->first();
+        if (! $table) {
+            return response()->json([
+                'is_valid' => false,
+                'message'  => "Meja dengan nomor '{$code}' tidak ditemukan."
+            ], 404);
+        }
+
+        return response()->json([
+            'is_valid' => true,
+            'data'     => $table
+        ]);
+    }
 }

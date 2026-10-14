@@ -35,24 +35,40 @@ class RecipeController extends Controller
 
     public function store(Request $request, Product $product)
     {
-        $validated = $request->validate([
-            'ingredients'                      => 'required|array|min:1',
-            'ingredients.*.ingredient_id'      => 'required|exists:ingredients,id',
-            'ingredients.*.quantity_needed'    => 'required|numeric|min:0.001',
-            'ingredients.*.recipe_unit'        => 'required|string|max:50',
-            'ingredients.*.conversion_factor'  => 'required|numeric|min:0.000001',
-        ]);
+        // Support single ingredient addition
+        if ($request->filled('ingredient_id')) {
+            $ingredient = Ingredient::findOrFail($request->ingredient_id);
+            $qty = $request->input('quantity_needed', $request->input('quantity', 1));
+            $unit = $request->input('recipe_unit', $request->input('unit', $ingredient->base_unit));
+            $factor = $request->input('conversion_factor', $request->input('unit_ratio', 1));
 
-        $syncData = [];
-        foreach ($validated['ingredients'] as $item) {
-            $syncData[$item['ingredient_id']] = [
-                'quantity_needed'   => $item['quantity_needed'],
-                'recipe_unit'       => $item['recipe_unit'],
-                'conversion_factor' => $item['conversion_factor'],
-            ];
+            $product->ingredients()->syncWithoutDetaching([
+                $ingredient->id => [
+                    'quantity_needed'   => $qty,
+                    'recipe_unit'       => $unit,
+                    'conversion_factor' => $factor,
+                ]
+            ]);
+        } elseif ($request->has('ingredients')) {
+            $validated = $request->validate([
+                'ingredients'                      => 'required|array|min:1',
+                'ingredients.*.ingredient_id'      => 'required|exists:ingredients,id',
+                'ingredients.*.quantity_needed'    => 'required|numeric|min:0.001',
+                'ingredients.*.recipe_unit'        => 'required|string|max:50',
+                'ingredients.*.conversion_factor'  => 'required|numeric|min:0.000001',
+            ]);
+
+            $syncData = [];
+            foreach ($validated['ingredients'] as $item) {
+                $syncData[$item['ingredient_id']] = [
+                    'quantity_needed'   => $item['quantity_needed'],
+                    'recipe_unit'       => $item['recipe_unit'],
+                    'conversion_factor' => $item['conversion_factor'],
+                ];
+            }
+
+            $product->ingredients()->sync($syncData);
         }
-
-        $product->ingredients()->sync($syncData);
 
         return response()->json([
             'message' => 'Resep berhasil diperbarui',

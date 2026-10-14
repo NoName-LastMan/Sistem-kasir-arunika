@@ -212,4 +212,184 @@ class OrderController extends Controller
             ]);
         });
     }
+
+    /**
+     * Kasir mengonfirmasi pesanan tamu pending, terima pembayaran, & teruskan ke dapur.
+     */
+    public function confirm(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'payment_method' => 'required|in:cash,qris,transfer,card',
+            'cash_tendered'  => 'nullable|numeric|min:0',
+        ]);
+
+        if ($order->status !== 'pending') {
+            return response()->json([
+                'message' => 'Pesanan ini sudah dikonfirmasi atau dibatalkan sebelumnya.'
+            ], 422);
+        }
+
+        return DB::transaction(function () use ($order, $validated, $request) {
+            $activeShift = Shift::where('user_id', $request->user()->id)
+                ->where('status', 'open')
+                ->latest()
+                ->first();
+
+            $cashTendered = $validated['payment_method'] === 'cash' 
+                ? (float) ($validated['cash_tendered'] ?? $order->total_amount) 
+                : null;
+            $changeDue = $cashTendered ? max(0, $cashTendered - (float) $order->total_amount) : 0;
+
+            $order->update([
+                'user_id'        => $request->user()->id,
+                'shift_id'       => $activeShift?->id,
+                'payment_method' => $validated['payment_method'],
+                'cash_tendered'  => $cashTendered,
+                'change_due'     => $changeDue,
+                'payment_status' => 'paid',
+                'status'         => 'processing', // Resmi masuk ke antrean KDS Dapur!
+            ]);
+
+            // Potong stok produk jadi & bahan baku mentah (BOM)
+            $inventoryService = app(InventoryService::class);
+            foreach ($order->items()->with('product')->get() as $item) {
+                if ($item->product) {
+                    $inventoryService->deductForOrder(
+                        product:  $item->product,
+                        quantity: $item->quantity,
+                        orderId:  $order->id,
+                        userId:   $request->user()->id,
+                    );
+                }
+            }
+
+            $inventoryService->deductIngredientsForOrder(
+                order:  $order,
+                userId: $request->user()->id,
+            );
+
+            return response()->json([
+                'message' => 'Pesanan berhasil dikonfirmasi dan diteruskan ke dapur',
+                'data'    => $order->load(['user:id,name', 'table:id,table_number', 'items.product', 'items.modifiers.modifierItem'])
+            ]);
+        });
+    }
+
+    /**
+     * Dapur menandai pesanan selesai dimasak (siap saji).
+     */
+    public function serve(Order $order)
+    {
+        $order->update(['status' => 'completed']);
+
+        return response()->json([
+            'message' => 'Pesanan selesai dimasak dan siap disajikan',
+            'data'    => $order->load(['table', 'items.product'])
+        ]);
+    }
+
+    /**
+     * Guest/Pelanggan membuat pesanan mandiri (tanpa login via cafe-frontend).
+     */
+    public function publicCreateOrder(Request $request)
+    {
+        $validated = $request->validate([
+            'table_code'             => 'nullable|string',
+            'table_id'               => 'nullable|exists:tables,id',
+            'customer_name'          => 'nullable|string|max:100',
+            'notes'                  => 'nullable|string',
+            'items'                  => 'required|array|min:1',
+            'items.*.product_id'     => 'required|exists:products,id',
+            'items.*.quantity'       => 'required|integer|min:1',
+            'items.*.notes'          => 'nullable|string',
+            'items.*.modifier_ids'   => 'nullable|array',
+            'items.*.modifiers'      => 'nullable|array',
+        ]);
+
+        $tableId = $validated['table_id'] ?? null;
+        if (! $tableId && ! empty($validated['table_code'])) {
+            $table = \App\Models\Table::where('table_number', $validated['table_code'])->first();
+            $tableId = $table?->id;
+        }
+
+        $formattedItems = [];
+        foreach ($validated['items'] as $item) {
+            $modifiers = [];
+            if (! empty($item['modifiers'])) {
+                $modifiers = $item['modifiers'];
+            } elseif (! empty($item['modifier_ids'])) {
+                foreach ($item['modifier_ids'] as $mId) {
+                    $modifiers[] = ['id' => $mId];
+                }
+            }
+            $formattedItems[] = [
+                'product_id' => $item['product_id'],
+                'quantity'   => $item['quantity'],
+                'notes'      => $item['notes'] ?? null,
+                'modifiers'  => $modifiers,
+            ];
+        }
+
+        $pricingService = app(OrderPricingService::class);
+        $pricing = $pricingService->calculateOrderPricing(
+            items:         $formattedItems,
+            paymentMethod: 'cash'
+        );
+
+        $defaultUser = \App\Models\User::where('role', 'cashier')->first() ?? \App\Models\User::first();
+
+        return DB::transaction(function () use ($validated, $tableId, $pricing, $defaultUser) {
+            $order = Order::create([
+                'invoice_number'  => 'INV-' . strtoupper(Str::random(8)),
+                'user_id'         => $defaultUser->id,
+                'shift_id'        => null,
+                'table_id'        => $tableId,
+                'order_type'      => $tableId ? 'dine_in' : 'takeaway',
+                'subtotal'        => $pricing['subtotal'],
+                'discount_amount' => 0,
+                'tax_amount'      => $pricing['tax_amount'],
+                'service_charge'  => 0,
+                'total_amount'    => $pricing['total_amount'],
+                'payment_method'  => null,
+                'cash_tendered'   => null,
+                'change_due'      => null,
+                'payment_status'  => 'unpaid',
+                'status'          => 'pending', // Menunggu konfirmasi kasir
+            ]);
+
+            foreach ($pricing['line_items'] as $line) {
+                $orderItem = $order->items()->create([
+                    'product_id' => $line['product_id'],
+                    'quantity'   => $line['quantity'],
+                    'unit_price' => $line['unit_price'],
+                    'subtotal'   => $line['subtotal'],
+                    'notes'      => $line['notes'] ?? null,
+                ]);
+
+                if (! empty($line['modifiers'])) {
+                    $orderItem->modifiers()->createMany($line['modifiers']);
+                }
+            }
+
+            return response()->json([
+                'message' => 'Pesanan berhasil dibuat, silakan konfirmasi pembayaran ke kasir.',
+                'data'    => $order->load(['table', 'items.product', 'items.modifiers.modifierItem'])
+            ], 201);
+        });
+    }
+
+    /**
+     * Pelacakan status pesanan publik untuk tamu.
+     */
+    public function publicOrderStatus($id)
+    {
+        $order = Order::with(['table', 'items.product', 'items.modifiers.modifierItem'])
+            ->where('id', $id)
+            ->orWhere('invoice_number', $id)
+            ->firstOrFail();
+
+        return response()->json([
+            'data' => $order
+        ]);
+    }
 }
