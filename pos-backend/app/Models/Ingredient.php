@@ -12,6 +12,18 @@ class Ingredient extends Model
     protected $guarded = ['id'];
     protected $appends = ['unit', 'stock', 'minimum_stock', 'current_stock'];
 
+    protected static function booted(): void
+    {
+        static::saved(function (Ingredient $ingredient) {
+            if ($ingredient->wasChanged('stock_quantity')) {
+                app(\App\Services\StockForecastingService::class)->syncIngredientStockSnapshot(
+                    $ingredient->id,
+                    (float) $ingredient->stock_quantity
+                );
+            }
+        });
+    }
+
     public function getUnitAttribute(): ?string
     {
         return $this->base_unit;
@@ -35,9 +47,11 @@ class Ingredient extends Model
     protected function casts(): array
     {
         return [
-            'stock_quantity' => 'decimal:3',
-            'min_stock_alert' => 'decimal:3',
-            'cost_per_unit' => 'decimal:2',
+            'stock_quantity'      => 'decimal:3',
+            'min_stock_alert'     => 'decimal:3',
+            'cost_per_unit'       => 'decimal:2',
+            'lead_time_days'      => 'integer',
+            'purchase_unit_ratio' => 'decimal:3',
         ];
     }
 

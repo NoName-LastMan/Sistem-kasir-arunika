@@ -10,11 +10,15 @@ return new class extends Migration
     public function up(): void
     {
         // Update role enum to include superadmin
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('superadmin', 'admin', 'cashier', 'kitchen') DEFAULT 'cashier'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('superadmin', 'admin', 'cashier', 'kitchen') DEFAULT 'cashier'");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'cashier', 'kitchen') DEFAULT 'cashier'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'cashier', 'kitchen') DEFAULT 'cashier'");
+        }
     }
 };

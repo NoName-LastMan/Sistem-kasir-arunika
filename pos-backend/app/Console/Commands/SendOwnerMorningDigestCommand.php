@@ -33,7 +33,7 @@ class SendOwnerMorningDigestCommand extends Command
         $this->info("Menghasilkan Executive Morning Digest untuk tanggal: {$dateStr}");
 
         // 1. Ambil Data Penjualan Kemarin
-        $salesReport = $reportService->salesSummary($dateStr, $dateStr);
+        $salesReport = $reportService->calculateSalesSummary($dateStr, $dateStr);
 
         // 2. Selisih Kas Shift Kemarin
         $shifts = Shift::whereDate('opened_at', $dateStr)->get();
@@ -46,8 +46,8 @@ class SendOwnerMorningDigestCommand extends Command
         $wasteCount = WasteRecord::whereDate('created_at', $dateStr)->count();
 
         // 4. Anomali Rekonsiliasi (Stock Opname)
-        $reconReport = $reconciliationService->generateReport($dateStr, $dateStr);
-        $anomalyCount = count($reconReport['anomalies'] ?? []);
+        $reconReport = $reconciliationService->getReconciliationReport($dateStr, $dateStr);
+        $anomalyCount = collect($reconReport)->where('is_anomaly', true)->count();
 
         // 5. Prediksi Stok Kritis Hari Ini
         $forecasts = $forecastingService->getForecast(null, true);

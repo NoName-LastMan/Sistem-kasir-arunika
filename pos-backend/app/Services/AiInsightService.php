@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\AiBriefingLog;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -9,34 +11,75 @@ class AiInsightService
 {
     /**
      * Memanggil Groq API atau Google Gemini API untuk mendapatkan analisis naratif.
-     *
-     * @param array $metrics Data forecasting stok & operasional toko
-     * @param bool $isExecutive True jika insight ditujukan untuk Owner
-     * @return string
+     * Menggunakan snapshot AiBriefingLog jika sudah tersedia untuk hari ini (Hemat Token & Cepat).
      */
-    public function generateInsights(array $metrics, bool $isExecutive = false): string
+    public function generateInsights(array $metrics, bool $isExecutive = false, bool $forceRefresh = false): string
     {
+        $today = Carbon::today()->toDateString();
+
+        // 1. Cek apakah narasi hari ini sudah dibuat di AiBriefingLog
+        if (!$forceRefresh) {
+            $log = AiBriefingLog::whereDate('briefing_date', $today)->first();
+            if ($log) {
+                if ($isExecutive && !empty($log->owner_executive_payload['narrative'])) {
+                    return $log->owner_executive_payload['narrative'];
+                }
+                if (!$isExecutive && !empty($log->admin_operational_payload['narrative'])) {
+                    return $log->admin_operational_payload['narrative'];
+                }
+            }
+        }
+
+        // 2. Generate insight narasi jika belum ada
         $groqKey = config('services.groq.key', env('GROQ_API_KEY'));
         $geminiKey = config('services.gemini.key', env('GEMINI_API_KEY'));
+        $providerUsed = 'rule-based-fallback';
+        $insight = null;
 
-        // Coba Groq LPU terlebih dahulu jika ada key (sangat cepat & responsif)
+        // Coba Groq LPU terlebih dahulu (sangat cepat & hemat latency)
         if ($groqKey) {
             $insight = $this->callGroq($groqKey, $metrics, $isExecutive);
             if ($insight) {
-                return $insight;
+                $providerUsed = 'groq-llama-3.3';
             }
         }
 
-        // Coba Google Gemini jika key Groq tidak ada atau gagal
-        if ($geminiKey) {
+        // Coba Google Gemini jika Groq tidak tersedia atau gagal
+        if (!$insight && $geminiKey) {
             $insight = $this->callGemini($geminiKey, $metrics, $isExecutive);
             if ($insight) {
-                return $insight;
+                $providerUsed = 'gemini-2.5-flash';
             }
         }
 
-        // Fallback aman tanpa dependensi eksternal (Rule-based narrative)
-        return $this->generateFallbackNarrative($metrics, $isExecutive);
+        // Fallback deterministik bebas ketergantungan jaringan
+        if (!$insight) {
+            $insight = $this->generateFallbackNarrative($metrics, $isExecutive);
+        }
+
+        // 3. Simpan ke AiBriefingLog hari ini
+        try {
+            $log = AiBriefingLog::firstOrNew(['briefing_date' => $today]);
+            $log->llm_provider = $providerUsed;
+
+            if ($isExecutive) {
+                $payload = $log->owner_executive_payload ?? [];
+                $payload['narrative'] = $insight;
+                $payload['generated_at'] = Carbon::now()->toIso8601String();
+                $log->owner_executive_payload = $payload;
+            } else {
+                $payload = $log->admin_operational_payload ?? [];
+                $payload['narrative'] = $insight;
+                $payload['generated_at'] = Carbon::now()->toIso8601String();
+                $log->admin_operational_payload = $payload;
+            }
+
+            $log->save();
+        } catch (\Throwable $e) {
+            Log::warning("Gagal menyimpan AiBriefingLog: " . $e->getMessage());
+        }
+
+        return $insight;
     }
 
     /**
@@ -50,12 +93,12 @@ class AiInsightService
 
         try {
             $response = Http::withToken($apiKey)
-                ->timeout(8)
+                ->timeout(6)
                 ->post('https://api.groq.com/openai/v1/chat/completions', [
                     'model' => 'llama-3.3-70b-versatile',
                     'messages' => [
                         ['role' => 'system', 'content' => $systemPrompt],
-                        ['role' => 'user', 'content' => "Data Metrik Bahan Baku: " . json_encode($metrics)],
+                        ['role' => 'user', 'content' => "Data Metrik Bahan Baku: " . json_encode(array_slice($metrics, 0, 10))],
                     ],
                     'temperature' => 0.3,
                     'max_tokens'  => 300,
@@ -75,7 +118,7 @@ class AiInsightService
     }
 
     /**
-     * Panggilan ke Google Gemini API (Gemini 2.0 / 1.5 Flash).
+     * Panggilan ke Google Gemini API (Gemini 2.0 / 2.5 Flash).
      */
     private function callGemini(string $apiKey, array $metrics, bool $isExecutive): ?string
     {
@@ -85,14 +128,14 @@ class AiInsightService
 
         try {
             $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$apiKey}";
-            $response = Http::timeout(8)->post($url, [
+            $response = Http::timeout(6)->post($url, [
                 'system_instruction' => [
                     'parts' => [['text' => $roleInstruction]]
                 ],
                 'contents' => [
                     [
                         'parts' => [
-                            ['text' => "Data Stok: " . json_encode($metrics)]
+                            ['text' => "Data Stok: " . json_encode(array_slice($metrics, 0, 10))]
                         ]
                     ]
                 ],

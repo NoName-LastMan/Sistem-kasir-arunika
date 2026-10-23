@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\AiInsightService;
 use App\Services\StockForecastingService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,9 +22,14 @@ class ForecastingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $ingredientId = $request->query('ingredient_id') ? (int) $request->query('ingredient_id') : null;
-        $forecasts = $this->forecastingService->getForecast($ingredientId, false);
+        $forceRefresh = $request->boolean('refresh');
 
-        $insight = $this->aiService->generateInsights($forecasts->toArray(), false);
+        if ($forceRefresh) {
+            $this->forecastingService->generateAndSaveDailySnapshot(Carbon::today());
+        }
+
+        $forecasts = $this->forecastingService->getForecast($ingredientId, false);
+        $insight = $this->aiService->generateInsights($forecasts->toArray(), false, $forceRefresh);
 
         return response()->json([
             'status'  => 'success',
@@ -44,12 +50,19 @@ class ForecastingController extends Controller
     public function executive(Request $request): JsonResponse
     {
         $ingredientId = $request->query('ingredient_id') ? (int) $request->query('ingredient_id') : null;
+        $forceRefresh = $request->boolean('refresh');
+
+        if ($forceRefresh) {
+            $this->forecastingService->generateAndSaveDailySnapshot(Carbon::today());
+        }
+
         $forecasts = $this->forecastingService->getForecast($ingredientId, true);
 
         $totalEstimatedCost = $forecasts->sum('estimated_cost');
         $criticalCost = $forecasts->where('urgency', 'CRITICAL')->sum('estimated_cost');
+        $avgAccuracy = $forecasts->whereNotNull('accuracy_percentage')->avg('accuracy_percentage');
 
-        $insight = $this->aiService->generateInsights($forecasts->toArray(), true);
+        $insight = $this->aiService->generateInsights($forecasts->toArray(), true, $forceRefresh);
 
         return response()->json([
             'status'               => 'success',
@@ -59,6 +72,7 @@ class ForecastingController extends Controller
                 'critical_reorder_budget' => $criticalCost,
                 'critical_count'          => $forecasts->where('urgency', 'CRITICAL')->count(),
                 'warning_count'           => $forecasts->where('urgency', 'WARNING')->count(),
+                'average_accuracy'        => $avgAccuracy !== null ? round($avgAccuracy, 1) : null,
             ],
             'data'                 => $forecasts,
         ]);

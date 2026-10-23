@@ -50,6 +50,20 @@ Repositori dilengkapi folder `docs/` yang berisi cetak biru komprehensif:
 - `DOMAIN.md`: Model entitas, skema database, rumus keuangan, dan service layer.
 - `CODEMAP.md`: Panduan titik awal perubahan kode per fitur.
 - `API.md`: Kamus endpoint REST API lengkap.
+- `FORECASTING_AI_PLAN.md`: Cetak biru lengkap arsitektur hybrid microservice peramalan inventaris F&B.
+
+### 2.4 AI & Forecasting Microservice Engine (`forecasting-engine`)
+
+- **Framework**: Python 3.14 + FastAPI + Uvicorn (Port 8001)
+- **Model Routing**:
+  - *Tier 1 (Fast-Moving Items)*: AutoETS (Exponential Smoothing Holt-Winters dengan Weekend Seasonality Factor & Safety Stock P90).
+  - *Tier 2 (Intermittent Demand)*: Croston's Method untuk bahan baku dengan pemakaian berselang/sporadis.
+  - *Tier 3 (Cold-Start / Sparse Data)*: Weighted Moving Average (WMA) sebagai proteksi bahan baru.
+- **Hybrid Decoupled Architecture**:
+  - Background scheduler (`forecast:generate-daily`) berjalan otomatis pukul 01:00 WIB, menyimpan snapshot ter-materialisasi ke tabel `forecast_snapshots` & briefing naratif AI ke `ai_briefing_logs`.
+  - Event-driven Real-time Stock Sync: Setiap mutasi stok bahan baku (`Ingredient::saved`) otomatis menyelaraskan sisa hari (`days_until_stockout`), estimasi biaya belanja, dan status urgensi tanpa membebani server dengan kalkulasi time-series ulang.
+  - Silent Fallback: Jika microservice Python offline, Laravel fallback ke kalkulasi statistik internal dalam 1.5s tanpa melempar error 500.
+  - Peluncuran 1-Klik: Tersedia script [`run-all.bat`](file:///d:/Sistem-kasir-arunika/run-all.bat) & [`run-all.ps1`](file:///d:/Sistem-kasir-arunika/run-all.ps1) untuk menjalankan seluruh layanan sekaligus.
 
 ---
 
@@ -184,12 +198,15 @@ Akses peramban di `http://localhost:5173` lalu masuk menggunakan salah satu akun
 | :---------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------- |
 | **Kalkulasi Harga & Pajak**   | [`pos-backend/app/Services/OrderPricingService.php`](file:///d:/Sistem-kasir-arunika/pos-backend/app/Services/OrderPricingService.php)     | Logika diskon, pajak, subtotal, uang kembalian.                                              |
 | **Mutasi Stok & Bahan**       | [`pos-backend/app/Services/InventoryService.php`](file:///d:/Sistem-kasir-arunika/pos-backend/app/Services/InventoryService.php)           | Potong stok order, potong resep BOM, pengembalian void, audit log.                           |
+| **Forecasting & Reorder**     | [`pos-backend/app/Services/StockForecastingService.php`](file:///d:/Sistem-kasir-arunika/pos-backend/app/Services/StockForecastingService.php) | Multi-tier routing, safety stock P90, evaluasi akurasi WAPE, RBAC masking.                  |
+| **Python Forecasting Engine** | [`forecasting-engine/main.py`](file:///d:/Sistem-kasir-arunika/forecasting-engine/main.py)                                                 | Microservice FastAPI AutoETS, Croston, & WMA.                                                |
 | **Stock Opname & Anomali**    | [`pos-backend/app/Services/ReconciliationService.php`](file:///d:/Sistem-kasir-arunika/pos-backend/app/Services/ReconciliationService.php) | Perhitungan stok ekspektasi vs fisik, flag anomali > 5%.                                     |
 | **Laporan & HPP**             | [`pos-backend/app/Services/ReportService.php`](file:///d:/Sistem-kasir-arunika/pos-backend/app/Services/ReportService.php)                 | Laba kotor (_gross profit_), KPI omzet, breakdown pembayaran.                                |
-| **State Toko & Keranjang**    | [`pos-frontend/src/stores/pos.js`](file:///d:/Sistem-kasir-arunika/pos-frontend/src/stores/pos.js)                                         | State Pinia: cart, diskon, hold order, shift kasir, transaksi.                               |
-| **Antarmuka Kasir**           | [`pos-frontend/src/views/POS.vue`](file:///d:/Sistem-kasir-arunika/pos-frontend/src/views/POS.vue)                                         | UI POS, shortcut keyboard, QRIS, split bill, preview struk.                                  |
-| **Layar Dapur (KDS)**         | [`pos-frontend/src/views/KitchenDisplay.vue`](file:///d:/Sistem-kasir-arunika/pos-frontend/src/views/KitchenDisplay.vue)                   | Tiket pesanan aktif dapur & tombol selesai masak.                                            |
-| **Layout Admin Executive**    | [`pos-frontend/src/layouts/AdminLayout.vue`](file:///d:/Sistem-kasir-arunika/pos-frontend/src/layouts/AdminLayout.vue)                     | Sidebar navigasi berbasis role admin/superadmin.                                             |
+| **State Toko & Keranjang**    | [`pos-frontend/src/stores/authStore.js`](file:///d:/Sistem-kasir-arunika/pos-frontend/src/stores/authStore.js)                             | State Zustand autentikasi, sesi kasir, dan RBAC token.                                      |
+| **Antarmuka Kasir (POS)**     | [`pos-frontend/src/pages/cashier/PosPage.jsx`](file:///d:/Sistem-kasir-arunika/pos-frontend/src/pages/cashier/PosPage.jsx)                 | UI POS React, barcode scanner, QRIS, split bill, preview struk.                             |
+| **Layar Dapur (KDS)**         | [`pos-frontend/src/pages/kitchen/KitchenPage.jsx`](file:///d:/Sistem-kasir-arunika/pos-frontend/src/pages/kitchen/KitchenPage.jsx)         | Tiket pesanan aktif dapur & tombol selesai masak.                                            |
+| **Forecasting Backoffice UI** | [`pos-frontend/src/pages/admin/ForecastingPage.jsx`](file:///d:/Sistem-kasir-arunika/pos-frontend/src/pages/admin/ForecastingPage.jsx)     | Dashboard proyeksi stok, filter urgensi, export WhatsApp PO, AI digest.                      |
+| **Layout Admin Executive**    | [`pos-frontend/src/layouts/AdminLayout.jsx`](file:///d:/Sistem-kasir-arunika/pos-frontend/src/layouts/AdminLayout.jsx)                     | Sidebar navigasi berbasis role admin/superadmin.                                             |
 | **Portal Pelanggan & Brand**  | [`cafe-frontend/src/pages/HomePage.jsx`](file:///d:/Sistem-kasir-arunika/cafe-frontend/src/pages/HomePage.jsx)                             | Website publik Arunika UNIMUS Semarang, hero visual, cerita, fasilitas ruang.                |
 | **Pemesanan QR Meja & Menu**  | [`cafe-frontend/src/pages/MenuPage.jsx`](file:///d:/Sistem-kasir-arunika/cafe-frontend/src/pages/MenuPage.jsx)                             | Katalog menu live, filtering, modal varian/modifier, scan QR meja (`/meja/:kode`).           |
 | **Pelacakan Tiket Realtime**  | [`cafe-frontend/src/pages/TrackPage.jsx`](file:///d:/Sistem-kasir-arunika/cafe-frontend/src/pages/TrackPage.jsx)                           | Polling pintar status dapur/kasir dengan chime notifikasi Web Audio saat pesanan siap.       |
