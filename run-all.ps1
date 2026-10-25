@@ -22,20 +22,24 @@ if (-not (Test-Path $PhpPath)) {
 
 $rootDir = $PSScriptRoot
 
-Write-Host "[1/3] Menjalankan Python FastAPI Forecasting Engine (Port 8001)..." -ForegroundColor Green
+Write-Host "[1/4] Menjalankan Python FastAPI Forecasting Engine (Port 8001)..." -ForegroundColor Green
 Start-Process cmd -ArgumentList "/k cd /d `"$rootDir\forecasting-engine`" && python run.py" -WindowStyle Normal
 
-Write-Host "[2/3] Menjalankan Laravel Backend Core (Port 8000)..." -ForegroundColor Green
+Write-Host "[2/4] Menjalankan Laravel Backend Core (Port 8000)..." -ForegroundColor Green
 Start-Process cmd -ArgumentList "/k cd /d `"$rootDir\pos-backend`" && `"$PhpPath`" artisan serve --host=127.0.0.1 --port=8000" -WindowStyle Normal
 
-Write-Host "[3/3] Menjalankan POS Frontend Vite (Port 5173)..." -ForegroundColor Green
+Write-Host "[3/4] Menjalankan POS & KDS Frontend (Port 5173)..." -ForegroundColor Green
 Start-Process cmd -ArgumentList "/k cd /d `"$rootDir\pos-frontend`" && npm run dev" -WindowStyle Normal
+
+Write-Host "[4/4] Menjalankan Cafe Guest Self-Order Portal (Port 5174)..." -ForegroundColor Green
+Start-Process cmd -ArgumentList "/k cd /d `"$rootDir\cafe-frontend`" && npm run dev" -WindowStyle Normal
 
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host " Semua layanan Arunika POS berhasil diluncurkan!" -ForegroundColor Yellow
-Write-Host " - Frontend POS:       http://localhost:5173" -ForegroundColor White
-Write-Host " - Forecasting Engine: http://127.0.0.1:8001/docs" -ForegroundColor White
-Write-Host " - Backend API:        http://127.0.0.1:8000" -ForegroundColor White
+Write-Host " Semua layanan Arunika POS Suite berhasil diluncurkan!" -ForegroundColor Yellow
+Write-Host " - POS & Admin Panel:   http://localhost:5173" -ForegroundColor White
+Write-Host " - Cafe QR Self-Order:  http://localhost:5174" -ForegroundColor White
+Write-Host " - AI Forecast Engine:  http://127.0.0.1:8001/docs" -ForegroundColor White
+Write-Host " - Backend Core API:    http://127.0.0.1:8000" -ForegroundColor White
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host ""

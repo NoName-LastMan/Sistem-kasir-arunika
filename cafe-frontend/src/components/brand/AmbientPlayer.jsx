@@ -1,104 +1,72 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Volume2, VolumeX, Sparkles, Music } from 'lucide-react'
+import React, { useState } from 'react'
+import { Music, Play, Pause, SlidersHorizontal, Sparkles } from 'lucide-react'
+import { useAudioStore } from '../../store/audioStore'
+import { MusicPlayerModal } from './MusicPlayerModal'
 
 export function AmbientPlayer() {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const audioCtxRef = useRef(null)
-  const intervalRef = useRef(null)
+  const {
+    isPlaying,
+    currentTrackId,
+    tracks,
+    toggle,
+    isModalOpen,
+    setModalOpen
+  } = useAudioStore()
 
-  const stopAmbient = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    if (audioCtxRef.current) {
-      try {
-        audioCtxRef.current.close()
-      } catch {}
-      audioCtxRef.current = null
-    }
-    setIsPlaying(false)
-  }
-
-  const startAmbient = () => {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      if (!AudioCtx) return
-
-      const ctx = new AudioCtx()
-      if (ctx.state === 'suspended') {
-        ctx.resume()
-      }
-      audioCtxRef.current = ctx
-
-      // Synthesize periodic calm slow-bar chime & breeze harmonics (E major pentatonic)
-      const calmFrequencies = [329.63, 392.00, 493.88, 587.33, 659.25] // E4, G4, B4, D5, E5
-
-      const playRandomChime = () => {
-        if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') return
-
-        const freq = calmFrequencies[Math.floor(Math.random() * calmFrequencies.length)]
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(freq, ctx.currentTime)
-
-        gain.gain.setValueAtTime(0.0001, ctx.currentTime)
-        gain.gain.exponentialRampToValueAtTime(0.04, ctx.currentTime + 0.15)
-        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 3.2)
-
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-
-        osc.start(ctx.currentTime)
-        osc.stop(ctx.currentTime + 3.2)
-      }
-
-      playRandomChime()
-      intervalRef.current = setInterval(playRandomChime, 3800)
-      setIsPlaying(true)
-    } catch (e) {
-      console.warn('AudioContext not allowed without gesture:', e)
-    }
-  }
-
-  const toggle = () => {
-    if (isPlaying) {
-      stopAmbient()
-    } else {
-      startAmbient()
-    }
-  }
-
-  useEffect(() => {
-    return () => stopAmbient()
-  }, [])
+  const currentTrack = tracks.find(t => t.id === currentTrackId) || tracks[0]
 
   return (
-    <button
-      onClick={toggle}
-      type="button"
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all shadow-xs touch-target ${
-        isPlaying
-          ? 'bg-sun-400 text-forest-950 font-bold border border-sun-400 shadow-warm-sm'
-          : 'bg-white text-forest-950 font-semibold hover:bg-mint-100 border-2 border-pine-200 shadow-2xs'
-      }`}
-      aria-label={isPlaying ? 'Hentikan suasana suara taman fajar' : 'Putar suasana suara taman fajar'}
-      title="Suasana Akustik Fajar Arunika"
-    >
-      {isPlaying ? (
-        <>
-          <span className="flex items-end gap-0.5 h-3">
-            <span className="w-0.5 h-3 bg-forest-900 animate-[pulse_0.6s_ease-in-out_infinite]" />
-            <span className="w-0.5 h-2 bg-forest-900 animate-[pulse_0.8s_ease-in-out_infinite]" />
-            <span className="w-0.5 h-2.5 bg-forest-900 animate-[pulse_0.7s_ease-in-out_infinite]" />
-          </span>
-          <span>Suasana Fajar: Aktif</span>
-        </>
-      ) : (
-        <>
-          <Music className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Suasana Kafe</span>
-        </>
-      )}
-    </button>
+    <>
+      <div className="inline-flex items-center gap-1 bg-white p-1 rounded-full border-2 border-pine-200 shadow-2xs">
+        {/* Tombol Play / Pause Utama */}
+        <button
+          onClick={toggle}
+          type="button"
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all touch-target ${
+            isPlaying
+              ? 'bg-sun-400 text-forest-950 font-bold border border-sun-400 shadow-warm-xs'
+              : 'bg-paper-100 text-forest-900 hover:bg-mint-100 border border-transparent'
+          }`}
+          aria-label={isPlaying ? 'Jeda suasana kafe' : 'Putar suasana kafe'}
+          title={`Suasana Kafe: ${currentTrack.title}`}
+        >
+          {isPlaying ? (
+            <>
+              <span className="flex items-end gap-0.5 h-3">
+                <span className="w-0.5 h-3 bg-forest-900 animate-[pulse_0.6s_ease-in-out_infinite]" />
+                <span className="w-0.5 h-2 bg-forest-900 animate-[pulse_0.8s_ease-in-out_infinite]" />
+                <span className="w-0.5 h-2.5 bg-forest-900 animate-[pulse_0.7s_ease-in-out_infinite]" />
+              </span>
+              <span className="max-w-[85px] sm:max-w-[120px] truncate">
+                {currentTrack.title.split(' ')[0]}...
+              </span>
+            </>
+          ) : (
+            <>
+              <Music className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Suasana</span>
+              <span className="sm:hidden">Musik</span>
+            </>
+          )}
+        </button>
+
+        {/* Tombol Ganti Musik / Buka Modal Audio Lounge */}
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="p-1 rounded-full text-pine-600 hover:text-forest-950 hover:bg-mint-100 transition-colors"
+          title="Pilih Suasana & Ganti Musik"
+          aria-label="Pilih lagu dan ganti suasana musik kafe"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Modal Dialog Ganti Musik */}
+      <MusicPlayerModal
+        isOpen={isModalOpen}
+        onClose={() => setModalOpen(false)}
+      />
+    </>
   )
 }

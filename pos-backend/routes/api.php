@@ -44,9 +44,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
-    // Produk & Barcode
+    // Produk & Barcode & Upload Foto
     Route::get('/products', [ProductController::class, 'index']);
     Route::post('/products', [ProductController::class, 'store']);
+    Route::post('/upload-image', [ProductController::class, 'uploadImage']);
     Route::get('/products/by-barcode/{code}', [ProductController::class, 'byBarcode']);
     Route::get('/products/{product}', [ProductController::class, 'show']);
 

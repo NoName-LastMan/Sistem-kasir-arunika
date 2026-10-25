@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { api, unwrapList } from '../../api/client'
+import { ImageInput, PHOTO_PRESETS } from '../../components/common/ImageInput'
 import { 
   Coffee, Plus, Search, Edit2, Trash2, X, Check, AlertCircle, 
-  Tag, DollarSign, Package
+  Tag, DollarSign, Package, RefreshCw
 } from 'lucide-react'
 
 export function ProductsPage() {
@@ -12,14 +13,20 @@ export function ProductsPage() {
   const [search, setSearch] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+  
+  const generateSku = () => 'ARU-' + Math.floor(1000 + Math.random() * 9000)
+
   const [formData, setFormData] = useState({
     name: '',
-    sku: '',
+    sku: generateSku(),
     barcode: '',
     category_id: '',
     price: '',
     cost_price: '',
     stock: '',
+    track_stock: true,
+    description: '',
+    image: '',
     is_active: true
   })
   const [formError, setFormError] = useState(null)
@@ -47,12 +54,15 @@ export function ProductsPage() {
     setEditingProduct(null)
     setFormData({
       name: '',
-      sku: 'SKU-' + Math.floor(1000 + Math.random() * 9000),
+      sku: generateSku(),
       barcode: '',
       category_id: categories[0]?.id || '',
       price: '',
       cost_price: '',
       stock: '100',
+      track_stock: true,
+      description: '',
+      image: PHOTO_PRESETS[0].url,
       is_active: true
     })
     setFormError(null)
@@ -69,6 +79,9 @@ export function ProductsPage() {
       price: p.price || '',
       cost_price: p.cost_price || '',
       stock: p.stock ?? '',
+      track_stock: p.track_stock ?? true,
+      description: p.description || '',
+      image: p.image || '',
       is_active: p.is_active ?? true
     })
     setFormError(null)
@@ -81,13 +94,16 @@ export function ProductsPage() {
     setFormError(null)
     try {
       const payload = {
-        name: formData.name,
-        sku: formData.sku,
+        name: formData.name.trim(),
+        sku: formData.sku || generateSku(),
         barcode: formData.barcode || null,
         category_id: Number(formData.category_id),
         price: Number(formData.price),
         cost_price: Number(formData.cost_price) || 0,
         stock: formData.stock !== '' ? Number(formData.stock) : null,
+        track_stock: Boolean(formData.track_stock),
+        description: formData.description || null,
+        image: formData.image || null,
         is_active: Boolean(formData.is_active)
       }
 
@@ -122,6 +138,8 @@ export function ProductsPage() {
     p.barcode?.toLowerCase().includes(search.toLowerCase())
   )
 
+  const formatRupiah = (val) => 'Rp ' + Number(val || 0).toLocaleString('id-ID')
+
   return (
     <div className="p-8 max-w-7xl w-full mx-auto space-y-6">
       
@@ -132,7 +150,7 @@ export function ProductsPage() {
             Master Menu & Produk
           </h1>
           <p className="text-xs text-ink-500 mt-1">
-            Kelola katalog menu, harga jual, HPP (modal), dan barcode kasir
+            Kelola katalog menu kasir, harga jual, HPP (modal), foto sajian, dan barcode
           </p>
         </div>
 
@@ -141,7 +159,7 @@ export function ProductsPage() {
           onClick={openCreateModal}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-white text-xs font-semibold shadow-warm-md transition cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 text-sun-400" />
           <span>Tambah Menu Baru</span>
         </button>
       </div>
@@ -169,7 +187,7 @@ export function ProductsPage() {
           <table className="w-full text-left text-xs">
             <thead className="bg-paper-100 text-ink-700 font-semibold uppercase text-[10px] tracking-wider border-b border-pine-200">
               <tr>
-                <th className="py-3.5 px-5">Nama Menu</th>
+                <th className="py-3.5 px-5">Foto & Nama Menu</th>
                 <th className="py-3.5 px-4">SKU / Barcode</th>
                 <th className="py-3.5 px-4">Kategori</th>
                 <th className="py-3.5 px-4 text-right">Harga Jual</th>
@@ -195,8 +213,30 @@ export function ProductsPage() {
               ) : (
                 filteredProducts.map((p) => (
                   <tr key={p.id} className="hover:bg-paper-50/60 transition">
-                    <td className="py-3.5 px-5 font-bold text-forest-950">
-                      {p.name}
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-3">
+                        {p.image ? (
+                          <img
+                            src={p.image}
+                            alt={p.name}
+                            className="w-10 h-10 rounded-xl object-cover border border-pine-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-paper-100 border border-pine-200 flex items-center justify-center shrink-0 text-pine-400">
+                            <Coffee className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-bold text-forest-950 leading-tight">
+                            {p.name}
+                          </div>
+                          {p.description && (
+                            <div className="text-[10px] text-ink-500 font-normal line-clamp-1 mt-0.5 max-w-xs">
+                              {p.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-ink-600">
                       <div>{p.sku}</div>
@@ -208,10 +248,10 @@ export function ProductsPage() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono font-bold text-forest-900">
-                      Rp {Number(p.price || 0).toLocaleString('id-ID')}
+                      {formatRupiah(p.price)}
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono text-ink-600">
-                      Rp {Number(p.cost_price || 0).toLocaleString('id-ID')}
+                      {formatRupiah(p.cost_price)}
                     </td>
                     <td className="py-3.5 px-4 text-center font-mono">
                       {p.stock !== null ? (
@@ -236,7 +276,7 @@ export function ProductsPage() {
                         <button
                           type="button"
                           onClick={() => openEditModal(p)}
-                          className="p-1.5 rounded-lg border border-pine-200 hover:bg-paper-100 text-forest-800"
+                          className="p-1.5 rounded-lg border border-pine-200 hover:bg-paper-100 text-forest-800 cursor-pointer"
                           title="Edit"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -244,7 +284,7 @@ export function ProductsPage() {
                         <button
                           type="button"
                           onClick={() => handleDelete(p.id)}
-                          className="p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                          className="p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer"
                           title="Hapus"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -261,25 +301,26 @@ export function ProductsPage() {
 
       {/* Modal Add / Edit */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-forest-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-warm-lg border border-pine-200 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-pine-100">
+        <div className="fixed inset-0 z-50 bg-forest-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-warm-lg border border-pine-200 space-y-4 max-h-[92vh] flex flex-col overflow-hidden">
+            
+            <div className="flex items-center justify-between pb-3 border-b border-pine-100 shrink-0">
               <h3 className="font-serif font-bold text-lg text-forest-950">
-                {editingProduct ? 'Edit Master Menu' : 'Tambah Menu Baru'}
+                {editingProduct ? `Edit Menu: ${formData.name || 'Produk'}` : 'Tambah Menu Baru'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-ink-400 hover:text-ink-900">
+              <button onClick={() => setIsModalOpen(false)} className="text-ink-400 hover:text-ink-900 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {formError && (
-              <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs flex items-center gap-2 border border-red-200">
+              <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs flex items-center gap-2 border border-red-200 shrink-0">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleSubmit} className="space-y-4 text-xs overflow-y-auto flex-1 pr-1">
               <div>
                 <label className="block font-semibold text-ink-700 mb-1">Nama Menu</label>
                 <input
@@ -294,7 +335,17 @@ export function ProductsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-ink-700 mb-1">SKU</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-ink-700">SKU</label>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, sku: generateSku() })}
+                      className="text-[10px] text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className="w-2.5 h-2.5" />
+                      <span>Acak SKU</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     required
@@ -350,8 +401,11 @@ export function ProductsPage() {
                     required
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-pine-200 focus:outline-none focus:ring-2 focus:ring-forest-700 font-mono"
+                    className="w-full p-2.5 rounded-xl border border-pine-200 focus:outline-none focus:ring-2 focus:ring-forest-700 font-mono font-bold text-forest-900"
                   />
+                  <span className="text-[10px] text-pine-600 block mt-0.5">
+                    {formatRupiah(formData.price)}
+                  </span>
                 </div>
                 <div>
                   <label className="block font-semibold text-ink-700 mb-1">HPP / Modal (Rp)</label>
@@ -361,8 +415,29 @@ export function ProductsPage() {
                     onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
                     className="w-full p-2.5 rounded-xl border border-pine-200 focus:outline-none focus:ring-2 focus:ring-forest-700 font-mono"
                   />
+                  <span className="text-[10px] text-pine-600 block mt-0.5">
+                    Margin: {formatRupiah(Math.max(0, formData.price - formData.cost_price))}
+                  </span>
                 </div>
               </div>
+
+              {/* Deskripsi */}
+              <div>
+                <label className="block font-semibold text-ink-700 mb-1">Deskripsi / Catatan Rasa</label>
+                <textarea
+                  rows="2"
+                  placeholder="Karakteristik rasa, racikan, atau porsi sajian..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-pine-200 focus:outline-none focus:ring-2 focus:ring-forest-700 font-normal"
+                />
+              </div>
+
+              {/* Masukan Foto Menu (Upload / Preset / URL) */}
+              <ImageInput
+                value={formData.image}
+                onChange={(img) => setFormData({ ...formData, image: img })}
+              />
 
               <div className="flex items-center gap-2 pt-2">
                 <input
@@ -372,7 +447,7 @@ export function ProductsPage() {
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                   className="rounded border-pine-300 text-forest-800 focus:ring-forest-700"
                 />
-                <label htmlFor="is_active" className="text-xs font-semibold text-ink-800">
+                <label htmlFor="is_active" className="text-xs font-semibold text-ink-800 cursor-pointer">
                   Menu Tersedia & Aktif Dijual
                 </label>
               </div>
@@ -381,14 +456,14 @@ export function ProductsPage() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-pine-200 hover:bg-paper-100 font-semibold"
+                  className="px-4 py-2.5 rounded-xl border border-pine-200 hover:bg-paper-100 font-semibold cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-white font-semibold shadow-warm-md"
+                  className="px-5 py-2.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-white font-semibold shadow-warm-md cursor-pointer disabled:opacity-50"
                 >
                   {submitting ? 'Menyimpan...' : 'Simpan Menu'}
                 </button>

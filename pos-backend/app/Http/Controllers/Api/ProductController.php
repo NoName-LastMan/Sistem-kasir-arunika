@@ -47,6 +47,7 @@ class ProductController extends Controller
             'cost_price'       => 'nullable|numeric|min:0',
             'stock'            => 'nullable|integer|min:0',
             'track_stock'      => 'boolean',
+            'image'            => 'nullable|string',
             'modifier_group_ids' => 'nullable|array',
             'modifier_group_ids.*' => 'exists:modifier_groups,id'
         ]);
@@ -60,6 +61,7 @@ class ProductController extends Controller
             'cost_price'  => $validated['cost_price'] ?? 0,
             'stock'       => $validated['stock'] ?? 0,
             'track_stock' => $validated['track_stock'] ?? false,
+            'image'       => $validated['image'] ?? null,
             'is_active'   => true,
         ]);
 
@@ -120,5 +122,62 @@ class ProductController extends Controller
                 'modifier_groups' => $modifierGroups,
             ]
         ]);
+    }
+
+    /**
+     * Upload foto produk dari perangkat kasir / admin
+     */
+    public function uploadImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,webp,svg,gif|max:10240',
+            'image_base64' => 'nullable|string',
+        ]);
+
+        $destinationPath = public_path('uploads/products');
+        if (!file_exists($destinationPath)) {
+            @mkdir($destinationPath, 0755, true);
+        }
+
+        // 1. Jika via multipart file
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $filename = 'menu_' . time() . '_' . \Illuminate\Support\Str::random(8) . '.' . $file->getClientOriginalExtension();
+            $file->move($destinationPath, $filename);
+            $url = url('uploads/products/' . $filename);
+
+            return response()->json([
+                'message' => 'Foto produk berhasil diunggah',
+                'url'     => $url,
+                'filename' => $filename
+            ]);
+        }
+
+        // 2. Jika via base64 data URL
+        if ($request->filled('image_base64')) {
+            $base64Data = $request->input('image_base64');
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
+                $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+                $type = strtolower($type[1]);
+                if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                    return response()->json(['message' => 'Format gambar tidak didukung'], 422);
+                }
+                $decoded = base64_decode($base64Data);
+                if ($decoded === false) {
+                    return response()->json(['message' => 'Gagal membaca data gambar'], 422);
+                }
+                $filename = 'menu_' . time() . '_' . \Illuminate\Support\Str::random(8) . '.' . $type;
+                file_put_contents($destinationPath . '/' . $filename, $decoded);
+                $url = url('uploads/products/' . $filename);
+
+                return response()->json([
+                    'message' => 'Foto produk berhasil diunggah',
+                    'url'     => $url,
+                    'filename' => $filename
+                ]);
+            }
+        }
+
+        return response()->json(['message' => 'File atau data gambar tidak ditemukan.'], 400);
     }
 }

@@ -36,7 +36,7 @@ export function MenuPage() {
 
       if (!matchesCategory) return false
       if (!query) return true
-      return product.name.toLowerCase().includes(query) || product.description.toLowerCase().includes(query)
+      return (product.name || '').toLowerCase().includes(query) || (product.description || '').toLowerCase().includes(query)
     })
   }, [products, activeCategory, searchQuery])
 
@@ -54,7 +54,7 @@ export function MenuPage() {
 
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header Halaman Menu */}
+      {/* Header Halaman Menu Pelanggan */}
       <div className="mb-8">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-serif text-forest-950 mb-3">
           Katalog menu fajar
@@ -142,7 +142,7 @@ export function MenuPage() {
         </div>
       )}
 
-      {/* Modal Detail & Modifier */}
+      {/* Modal Detail & Modifier Pesanan Pelanggan */}
       {selectedProduct && (
         <ProductDetailModal
           product={selectedProduct}

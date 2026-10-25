@@ -2,7 +2,7 @@ import React from 'react'
 import { Coffee, Flame, Droplets } from 'lucide-react'
 import { ProductCard } from './ProductCard'
 
-export function ManualBrewSection({ products, onSelectProduct }) {
+export function ManualBrewSection({ products, onSelectProduct, onEditProduct }) {
   if (!products || products.length === 0) return null
 
   return (
@@ -41,6 +41,7 @@ export function ManualBrewSection({ products, onSelectProduct }) {
             <ProductCard
               product={product}
               onSelect={onSelectProduct}
+              onEdit={onEditProduct}
             />
           </div>
         ))}

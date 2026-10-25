@@ -17,6 +17,7 @@ export function TrackPage() {
   const { isMuted, toggleMute, playReadyChime } = useChime()
 
   const [isLoading, setIsLoading] = useState(!activeOrder)
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false)
   const previousStatusRef = useRef(activeOrder?.status)
   const [ariaAnnouncement, setAriaAnnouncement] = useState('')
 
@@ -27,6 +28,15 @@ export function TrackPage() {
       setIsLoading(false)
     })
   }, [id])
+
+  const handleManualRefresh = async () => {
+    setIsManualRefreshing(true)
+    try {
+      await fetchOrderStatus(id)
+    } finally {
+      setTimeout(() => setIsManualRefreshing(false), 500)
+    }
+  }
 
   // Cek jika status berubah dan picu chime saat siap
   useEffect(() => {
@@ -71,8 +81,8 @@ export function TrackPage() {
         {ariaAnnouncement}
       </div>
 
-      {/* Navigasi Balik ke Menu */}
-      <div className="mb-6 flex items-center justify-between">
+      {/* Navigasi Balik ke Menu & Kontrol Aksi */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/menu"
           className="inline-flex items-center gap-1.5 text-sm font-bold text-pine-700 hover:text-forest-950 transition-colors"
@@ -81,25 +91,39 @@ export function TrackPage() {
           <span>Kembali ke Menu</span>
         </Link>
 
-        {/* Toggle Notifikasi Bunyi (Chime) */}
-        <button
-          onClick={toggleMute}
-          type="button"
-          className="inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl border border-forest-900/15 bg-white hover:bg-mint-100 text-forest-950 transition-colors touch-target shadow-2xs"
-          aria-label={isMuted ? 'Aktifkan suara notifikasi pesanan' : 'Senyapkan suara notifikasi pesanan'}
-        >
-          {isMuted ? (
-            <>
-              <VolumeX className="w-3.5 h-3.5 text-red-600" />
-              <span>Bunyi: Mati</span>
-            </>
-          ) : (
-            <>
-              <Volume2 className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Bunyi: Aktif</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Tombol Refresh Status Manual */}
+          <button
+            onClick={handleManualRefresh}
+            disabled={isManualRefreshing}
+            type="button"
+            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border border-forest-900/15 bg-white hover:bg-mint-100 text-forest-950 transition-colors touch-target shadow-2xs cursor-pointer disabled:opacity-50"
+            title="Perbarui status pesanan sekarang"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-forest-800 ${isManualRefreshing ? 'animate-spin text-emerald-700' : ''}`} />
+            <span className="hidden sm:inline">{isManualRefreshing ? 'Memperbarui...' : 'Perbarui Status'}</span>
+          </button>
+
+          {/* Toggle Notifikasi Bunyi (Chime) */}
+          <button
+            onClick={toggleMute}
+            type="button"
+            className="inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl border border-forest-900/15 bg-white hover:bg-mint-100 text-forest-950 transition-colors touch-target shadow-2xs cursor-pointer"
+            aria-label={isMuted ? 'Aktifkan suara notifikasi pesanan' : 'Senyapkan suara notifikasi pesanan'}
+          >
+            {isMuted ? (
+              <>
+                <VolumeX className="w-3.5 h-3.5 text-red-600" />
+                <span>Bunyi: Mati</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Bunyi: Aktif</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {isLoading ? (

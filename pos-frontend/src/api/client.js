@@ -2,9 +2,11 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem('pos_token')
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
+
   const headers = {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options.headers || {})
   }
@@ -51,6 +53,7 @@ export const api = {
   post: (url, body, options) => apiRequest(url, { ...options, method: 'POST', body: JSON.stringify(body) }),
   put: (url, body, options) => apiRequest(url, { ...options, method: 'PUT', body: JSON.stringify(body) }),
   delete: (url, options) => apiRequest(url, { ...options, method: 'DELETE' }),
+  upload: (url, formData, options) => apiRequest(url, { ...options, method: 'POST', body: formData }),
   downloadCsv: async (url, filename = 'laporan.csv') => {
     const blob = await apiRequest(url, { responseType: 'blob' })
     const link = document.createElement('a')

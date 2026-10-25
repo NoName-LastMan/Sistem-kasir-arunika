@@ -72,6 +72,11 @@ export function mapProduct(raw, allModifierGroups = []) {
   const modGroupIds = raw.modifier_group_ids || (raw.modifier_groups ? raw.modifier_groups.map(g => g.id) : [])
   const modifierGroups = allModifierGroups.filter(g => modGroupIds.includes(g.id))
 
+  // Deteksi ketersediaan stok riil kasir
+  const hasStock = raw.track_stock ? (Number(raw.stock) > 0) : true
+  const isActive = raw.is_active !== undefined ? Boolean(raw.is_active) : true
+  const isAvailable = Boolean(raw.is_available ?? (isActive && hasStock))
+
   return {
     id: raw.id,
     categoryId: raw.category_id,
@@ -80,7 +85,9 @@ export function mapProduct(raw, allModifierGroups = []) {
     price: Number(raw.price || 0),
     formattedPrice: formatCurrency(Number(raw.price || 0)),
     image: raw.image || null,
-    isAvailable: Boolean(raw.is_available ?? true),
+    stock: Number(raw.stock || 0),
+    trackStock: Boolean(raw.track_stock),
+    isAvailable,
     isBestSeller: Boolean(raw.is_best_seller),
     isNew: Boolean(raw.is_new),
     isManualBrew: Boolean(raw.is_manual_brew),

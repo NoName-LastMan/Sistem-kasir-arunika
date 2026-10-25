@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, Coffee, Sparkles } from 'lucide-react'
+import { Plus, Coffee } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { useCartStore } from '../../store/cartStore'
@@ -21,7 +21,7 @@ export function ProductCard({ product, onSelect }) {
   return (
     <article
       onClick={() => isAvailable && onSelect(product)}
-      className={`group relative rounded-2xl border-2 card-interactive flex flex-col justify-between h-full bg-white overflow-hidden shadow-warm-sm ${
+      className={`group relative rounded-2xl border-2 card-interactive flex flex-col justify-between h-full bg-white overflow-hidden shadow-warm-sm transition-all ${
         isAvailable
           ? 'border-pine-200 hover:border-emerald-600 hover:shadow-warm-md cursor-pointer'
           : 'border-pine-100 bg-paper-100 opacity-75 cursor-not-allowed'
@@ -47,7 +47,7 @@ export function ProductCard({ product, onSelect }) {
 
           {/* Badges di Atas Foto */}
           <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1 pointer-events-none">
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 flex-wrap">
               {!isAvailable && (
                 <Badge variant="soldOut">Habis</Badge>
               )}
@@ -93,7 +93,7 @@ export function ProductCard({ product, onSelect }) {
         </div>
       </div>
 
-      {/* Footer: Harga & Aksi Tambah */}
+      {/* Footer: Harga & Aksi Pesan */}
       <div className="px-4 pb-4 sm:px-5 sm:pb-5 pt-3 border-t-2 border-pine-200 flex items-center justify-between mt-auto bg-white">
         <div>
           <span className="text-[10px] text-pine-600 font-bold uppercase tracking-wider block">Harga</span>

@@ -50,6 +50,7 @@ class AdminProductController extends Controller
             'stock'              => 'nullable|integer|min:0',
             'track_stock'        => 'boolean',
             'is_active'          => 'boolean',
+            'image'              => 'nullable|string',
             'modifier_group_ids' => 'nullable|array',
             'modifier_group_ids.*' => 'exists:modifier_groups,id'
         ]);
@@ -63,6 +64,7 @@ class AdminProductController extends Controller
             'cost_price'  => $validated['cost_price'] ?? 0,
             'stock'       => 0,
             'track_stock' => $validated['track_stock'] ?? false,
+            'image'       => $validated['image'] ?? null,
             'is_active'   => $validated['is_active'] ?? true,
         ]);
 
@@ -109,6 +111,7 @@ class AdminProductController extends Controller
             'stock'              => 'nullable|integer|min:0',
             'track_stock'        => 'boolean',
             'is_active'          => 'boolean',
+            'image'              => 'nullable|string',
             'modifier_group_ids' => 'nullable|array',
             'modifier_group_ids.*' => 'exists:modifier_groups,id'
         ]);
@@ -121,6 +124,7 @@ class AdminProductController extends Controller
             'price'       => $validated['price'],
             'cost_price'  => $validated['cost_price'] ?? 0,
             'track_stock' => $validated['track_stock'] ?? false,
+            'image'       => array_key_exists('image', $validated) ? $validated['image'] : $product->image,
             'is_active'   => $validated['is_active'] ?? true,
         ]);
 

@@ -13,6 +13,7 @@ import { HeldOrdersModal } from '../../components/pos/HeldOrdersModal'
 import { TablePickerModal } from '../../components/pos/TablePickerModal'
 import { ShiftModal } from '../../components/shifts/ShiftModal'
 import { GuestOrdersModal } from '../../components/pos/GuestOrdersModal'
+import { QuickAddProductModal } from '../../components/pos/QuickAddProductModal'
 import { 
   Search, ShoppingCart, Coffee, Trash2, Plus, Minus, Bookmark, 
   CreditCard, LayoutGrid, Clock, LogOut, Utensils, History,
@@ -45,6 +46,8 @@ export function POSPage() {
   const [showTableModal, setShowTableModal] = useState(false)
   const [showShiftModal, setShowShiftModal] = useState(false)
   const [showGuestModal, setShowGuestModal] = useState(false)
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false)
+  const [successToast, setSuccessToast] = useState(null)
   const [pendingGuestCount, setPendingGuestCount] = useState(0)
   const [completedOrder, setCompletedOrder] = useState(null)
 
@@ -132,6 +135,7 @@ export function POSPage() {
       setShowHeldModal(false)
       setShowTableModal(false)
       setShowShiftModal(false)
+      setShowQuickAddModal(false)
     }
   })
 
@@ -247,6 +251,17 @@ export function POSPage() {
 
           {hasRole(['admin', 'superadmin']) && (
             <Link
+              to="/admin/products"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-800/80 hover:bg-forest-700 text-xs font-medium transition"
+              title="Kelola Master Menu & Produk"
+            >
+              <Coffee className="w-4 h-4 text-sun-300" />
+              <span>Master Menu</span>
+            </Link>
+          )}
+
+          {hasRole(['admin', 'superadmin']) && (
+            <Link
               to="/admin/reports"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sun-400 text-forest-950 hover:bg-sun-400/90 text-xs font-semibold transition"
             >
@@ -319,6 +334,17 @@ export function POSPage() {
                 <Bookmark className="w-4 h-4 text-wood-500" />
                 <span>Held (F7)</span>
               </button>
+
+              {/* Quick Add Product Button */}
+              <button
+                type="button"
+                onClick={() => setShowQuickAddModal(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-white text-xs font-bold transition shadow-warm-xs cursor-pointer shrink-0"
+                title="Tambah menu baru langsung ke kasir"
+              >
+                <Plus className="w-4 h-4 text-sun-400" />
+                <span>+ Tambah Menu</span>
+              </button>
             </div>
 
             {/* Category Tabs */}
@@ -357,9 +383,17 @@ export function POSPage() {
             {loadingProducts ? (
               <div className="py-24 text-center text-ink-400 text-xs">Memuat katalog menu...</div>
             ) : filteredProducts.length === 0 ? (
-              <div className="py-24 text-center text-ink-400 text-xs space-y-2">
+              <div className="py-24 text-center text-ink-400 text-xs space-y-3">
                 <Coffee className="w-8 h-8 text-pine-300 mx-auto" />
                 <p>Tidak ada produk ditemukan untuk kriteria pencarian ini.</p>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAddModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-forest-900 hover:bg-forest-800 text-white font-bold text-xs shadow-warm-xs transition cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 text-sun-400" />
+                  <span>Tambah Menu Ini Sekarang</span>
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
@@ -627,6 +661,29 @@ export function POSPage() {
           checkPendingGuestOrders()
         }}
       />
+
+      {/* Modal Cepat Tambah Menu Kasir */}
+      <QuickAddProductModal
+        isOpen={showQuickAddModal}
+        onClose={() => setShowQuickAddModal(false)}
+        categories={categories}
+        onSuccess={(newProduct) => {
+          fetchProducts(selectedCategory)
+          playSuccessChime()
+          setSuccessToast(`Menu "${newProduct.name}" berhasil ditambahkan ke katalog kasir!`)
+          setTimeout(() => setSuccessToast(null), 4000)
+        }}
+      />
+
+      {/* Toast Notifikasi Berhasil */}
+      {successToast && (
+        <div className="fixed top-4 right-4 z-50 bg-forest-950 text-white px-4 py-2.5 rounded-2xl shadow-warm-lg border border-sun-400/50 flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-top-2">
+          <div className="w-5 h-5 rounded-full bg-sun-400 text-forest-950 flex items-center justify-center font-bold">
+            <Check className="w-3.5 h-3.5" />
+          </div>
+          <span>{successToast}</span>
+        </div>
+      )}
 
     </div>
   )

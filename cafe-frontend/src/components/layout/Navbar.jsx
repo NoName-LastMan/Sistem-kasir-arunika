@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { ShoppingBag, Menu, X, QrCode, MapPin, Clock } from 'lucide-react'
+import { ShoppingBag, Menu, X, QrCode, MapPin, Clock, Music, Pencil, Plus } from 'lucide-react'
 import { useCartStore, selectCartItemCount, selectCartSubtotal } from '../../store/cartStore'
 import { useOrderStore } from '../../store/orderStore'
 import { useSettingsStore } from '../../store/settingsStore'
+import { useAudioStore } from '../../store/audioStore'
 import { useOpenStatus } from '../../hooks/useOpenStatus'
 import { formatCurrency } from '../../api/mappers'
 import { AmbientPlayer } from '../brand/AmbientPlayer'
@@ -20,6 +21,7 @@ export function Navbar({ onOpenCart }) {
 
   const settings = useSettingsStore(state => state.settings)
   const { isOpen } = useOpenStatus(settings)
+  const setAudioModalOpen = useAudioStore(state => state.setModalOpen)
 
   const navLinks = [
     { name: 'Beranda', path: '/' },
@@ -143,8 +145,8 @@ export function Navbar({ onOpenCart }) {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-pine-200 animate-in fade-in duration-150">
-            <nav className="flex flex-col gap-2">
+          <div className="lg:hidden py-4 border-t border-pine-200 animate-in fade-in duration-150 space-y-3">
+            <nav className="flex flex-col gap-1.5">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
@@ -156,6 +158,21 @@ export function Navbar({ onOpenCart }) {
                 </Link>
               ))}
             </nav>
+
+            {/* Aksi Tambahan di Drawer Mobile */}
+            <div className="pt-3 border-t border-pine-200 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setAudioModalOpen(true)
+                }}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-mint-50 text-forest-950 border border-emerald-300 text-xs font-bold text-left"
+              >
+                <Music className="w-4 h-4 text-emerald-600" />
+                <span>Ganti Suasana Musik Kafe</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
