@@ -313,7 +313,6 @@ Sistem-kasir-arunika/
 │   └── .gitignore
 ├── docker-compose.yml             # Orkestrasi Seluruh Layanan
 ├── run-all.bat & run-all.ps1      # Launcher Sekali Klik untuk Windows
-├── HANDOVER.md                    # Laporan Teknis Serah Terima Lengkap
 └── README.md                      # Dokumentasi Utama Repository
 ```
 
