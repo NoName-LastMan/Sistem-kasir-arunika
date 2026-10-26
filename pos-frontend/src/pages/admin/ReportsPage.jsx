@@ -152,18 +152,18 @@ export function ReportsPage() {
       </div>
 
       {/* Banner Khusus Owner: Master Excel Consolidation Feature */}
-      <div className="bg-gradient-to-r from-emerald-900 via-forest-900 to-pine-900 rounded-3xl p-6 text-white shadow-warm-lg relative overflow-hidden">
+      <div className="bg-gradient-to-r from-forest-950 via-forest-900 to-forest-800 rounded-3xl p-6 text-white shadow-warm-lg relative overflow-hidden border border-forest-800">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center gap-2 text-emerald-300 text-xs font-semibold uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
               <FileSpreadsheet className="w-4 h-4" />
               <span>All-In-One Workbook — Solusi Pelaporan Terpadu Owner</span>
             </div>
             <h2 className="text-xl font-bold font-serif text-white">
               Satu File Excel untuk Seluruh 9 Modul Laporan Restoran
             </h2>
-            <p className="text-xs text-emerald-100 leading-relaxed">
-              Kini Owner tidak perlu mengekspor laporan secara terpisah. Tombol <strong>"Export Master Excel"</strong> menggabungkan seluruh modul (Omzet, HPP, Margin, Menu Terlaris, Performa Kasir, Limbah Dapur, Audit Opname Anomali, Prediksi Stok AI, dan Detail Transaksi) ke dalam **satu file spreadsheet multi-tab** yang rapi, berformat mata uang, dan siap dianalisis di Microsoft Excel.
+            <p className="text-xs text-pine-100 leading-relaxed">
+              Kini Owner tidak perlu mengekspor laporan secara terpisah. Tombol <strong>"Export Master Excel"</strong> menggabungkan seluruh modul (Omzet, HPP, Margin, Menu Terlaris, Performa Kasir, Limbah Dapur, Audit Opname Anomali, Prediksi Stok AI, dan Detail Transaksi) ke dalam <strong>satu file spreadsheet multi-tab</strong> yang rapi, berformat mata uang, dan siap dianalisis di Microsoft Excel.
             </p>
           </div>
 
@@ -171,23 +171,23 @@ export function ReportsPage() {
             type="button"
             onClick={handleExportExcel}
             disabled={exportingExcel}
-            className="px-5 py-3 rounded-2xl bg-white hover:bg-emerald-50 text-forest-950 font-bold text-xs flex items-center gap-2.5 shadow-warm-md hover:shadow-warm-lg transition shrink-0 cursor-pointer"
+            className="px-5 py-3 rounded-2xl bg-white hover:bg-emerald-50 active:scale-95 text-forest-950 font-bold text-xs flex items-center gap-2.5 shadow-warm-md hover:shadow-warm-lg transition shrink-0 cursor-pointer disabled:opacity-50"
           >
             {exportingExcel ? (
-              <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-700" />
             ) : (
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
             )}
-            <span>Download Master Excel (.xls)</span>
+            <span>{exportingExcel ? 'Menyusun Excel...' : 'Download Master Excel (.xls)'}</span>
           </button>
         </div>
 
         {/* Decorative Grid of 9 Included Sheets */}
-        <div className="mt-6 pt-5 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-9 gap-2">
+        <div className="mt-6 pt-5 border-t border-forest-800/80 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2">
           {REPORT_MODULES.map((m, idx) => (
-            <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 text-center flex flex-col items-center justify-center gap-1 border border-white/5">
-              <span className="text-[10px] font-mono font-bold text-emerald-300">Tab #{idx + 1}</span>
-              <span className="text-[11px] font-semibold text-white leading-tight line-clamp-1">{m.title}</span>
+            <div key={idx} className="bg-forest-950/60 hover:bg-forest-950/80 border border-forest-700/60 rounded-xl p-2.5 text-center flex flex-col items-center justify-center gap-1 transition shadow-sm">
+              <span className="text-[10px] font-mono font-bold text-emerald-400">Tab #{idx + 1}</span>
+              <span className="text-[11px] font-medium text-white/90 leading-tight line-clamp-1">{m.title}</span>
             </div>
           ))}
         </div>
