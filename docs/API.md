@@ -66,6 +66,7 @@ Endpoint untuk kasir harian (`cashier`), staf dapur, maupun admin.
 | `GET` | `/reports/cashier-sales` | Kasir/Admin | Rekapitulasi omzet per kasir | `start_date`, `end_date` |
 | `GET` | `/reports/profit-loss` | Kasir/Admin | Laba kotor (*Gross profit*) dihitung dari HPP/`cost_price` | `start_date`, `end_date` |
 | `GET` | `/reports/export-csv` | Kasir/Admin | Download file CSV rekap transaksi | `start_date`, `end_date` |
+| `GET` | `/reports/export-excel` | Kasir/Admin/Owner | Download Master Excel Konsolidasi (9 sheet lengkap: KPI, Laba Rugi, HPP, Tren, Menu, Kasir, Waste, Opname, AI Forecast, Transaksi) | `start_date`, `end_date` |
 
 ---
 

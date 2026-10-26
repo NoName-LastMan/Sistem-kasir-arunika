@@ -6,7 +6,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ModifierItem extends Model
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'modifier_group_id',
+        'name',
+        'price',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'price' => 'decimal:2',
+        ];
+    }
 
     public function group(): BelongsTo
     {

@@ -9,7 +9,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ingredient extends Model
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'name',
+        'base_unit',
+        'stock_quantity',
+        'min_stock_alert',
+        'cost_per_unit',
+        'supplier_info',
+        'track_stock',
+        'lead_time_days',
+        'purchase_unit',
+        'purchase_unit_ratio',
+    ];
     protected $appends = ['unit', 'stock', 'minimum_stock', 'current_stock'];
 
     protected static function booted(): void

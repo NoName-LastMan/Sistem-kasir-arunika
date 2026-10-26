@@ -7,17 +7,16 @@ echo        SISTEM KASIR ARUNIKA - FULLSTACK LAUNCHER
 echo ========================================================
 echo.
 
-:: Detect PHP 8.4
-set "PHP_CMD=C:\Users\T4N0C\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
-if not exist "!PHP_CMD!" (
-    set "PHP_CMD=%LOCALAPPDATA%\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
-)
-if not exist "!PHP_CMD!" (
-    where php >nul 2>&1
-    if !errorlevel! equ 0 (
-        set "PHP_CMD=php"
+:: Detect PHP executable from PATH first, then fallback to Winget packages
+set "PHP_CMD=php"
+where php >nul 2>&1
+if !errorlevel! neq 0 (
+    if exist "%LOCALAPPDATA%\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.5_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe" (
+        set "PHP_CMD=%LOCALAPPDATA%\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.5_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
+    ) else if exist "%LOCALAPPDATA%\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe" (
+        set "PHP_CMD=%LOCALAPPDATA%\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
     ) else (
-        echo [ERROR] PHP 8.4 executable tidak ditemukan!
+        echo [ERROR] PHP executable tidak ditemukan di PATH! Pastikan PHP sudah terinstal.
         pause
         exit /b 1
     )

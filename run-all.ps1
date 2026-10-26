@@ -6,16 +6,15 @@ Write-Host "       SISTEM KASIR ARUNIKA - FULLSTACK LAUNCHER" -ForegroundColor Y
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host ""
 
-$PhpPath = "C:\Users\T4N0C\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
-if (-not (Test-Path $PhpPath)) {
-    $PhpPath = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
-}
-if (-not (Test-Path $PhpPath)) {
-    $found = Get-Command php -ErrorAction SilentlyContinue
-    if ($found) {
-        $PhpPath = "php"
+$PhpPath = "php"
+$found = Get-Command php -ErrorAction SilentlyContinue
+if (-not $found) {
+    if (Test-Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.5_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe") {
+        $PhpPath = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.5_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
+    } elseif (Test-Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe") {
+        $PhpPath = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\PHP.PHP.NTS.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
     } else {
-        Write-Error "PHP 8.4 executable tidak ditemukan! Pastikan PHP 8.4 terpasang."
+        Write-Error "PHP executable tidak ditemukan di PATH! Pastikan PHP sudah terinstal."
         exit 1
     }
 }

@@ -7,7 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class HeldOrder extends Model
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'user_id',
+        'table_id',
+        'customer_name',
+        'reference_note',
+        'order_type',
+        'subtotal',
+        'cart_data',
+    ];
 
     protected $casts = [
         'cart_data' => 'array',

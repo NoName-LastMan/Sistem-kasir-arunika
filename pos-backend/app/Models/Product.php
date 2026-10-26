@@ -8,7 +8,29 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'category_id',
+        'name',
+        'sku',
+        'description',
+        'price',
+        'cost_price',
+        'stock',
+        'track_stock',
+        'image',
+        'is_active',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'price' => 'decimal:2',
+            'cost_price' => 'decimal:2',
+            'stock' => 'integer',
+            'track_stock' => 'boolean',
+            'is_active' => 'boolean',
+        ];
+    }
 
     public function category(): BelongsTo
     {

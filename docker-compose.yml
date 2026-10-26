@@ -1,0 +1,78 @@
+services:
+  pos-backend:
+    build:
+      context: ./pos-backend
+      dockerfile: Dockerfile
+    container_name: arunika-pos-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=ArunikaPOS
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/database/database.sqlite
+      - FORECASTING_SERVICE_URL=http://forecasting-engine:8001
+      - SANCTUM_EXPIRATION=1440
+    volumes:
+      - backend-storage:/var/www/storage
+      - backend-db:/var/www/database
+    depends_on:
+      forecasting-engine:
+        condition: service_healthy
+    networks:
+      - arunika-network
+
+  forecasting-engine:
+    build:
+      context: ./forecasting-engine
+      dockerfile: Dockerfile
+    container_name: arunika-forecasting-engine
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - FORECASTING_API_KEY=
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - arunika-network
+
+  pos-frontend:
+    build:
+      context: ./pos-frontend
+      dockerfile: Dockerfile
+    container_name: arunika-pos-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - pos-backend
+    networks:
+      - arunika-network
+
+  cafe-frontend:
+    build:
+      context: ./cafe-frontend
+      dockerfile: Dockerfile
+    container_name: arunika-cafe-frontend
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      - pos-backend
+    networks:
+      - arunika-network
+
+volumes:
+  backend-storage:
+  backend-db:
+
+networks:
+  arunika-network:
+    driver: bridge

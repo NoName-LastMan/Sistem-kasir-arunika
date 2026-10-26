@@ -7,7 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WasteRecord extends Model
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'ingredient_id',
+        'quantity',
+        'reason',
+        'notes',
+        'user_id',
+        'shift_id',
+        'image_proof',
+    ];
 
     protected function casts(): array
     {

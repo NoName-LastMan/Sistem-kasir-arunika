@@ -1,0 +1,21 @@
+{
+  "name": "Arunika Coffee & Space",
+  "short_name": "Arunika Cafe",
+  "description": "Menu digital dan pemesanan mandiri Arunika Coffee & Space",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafaf9",
+  "theme_color": "#292524",
+  "icons": [
+    {
+      "src": "/logo-circle.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -385,12 +385,9 @@ class StockForecastingService
         return ['burn_rate' => $burnRate, 'safety_stock' => $safetyStock];
     }
 
-    /**
-     * Panggilan ke Python FastAPI microservice jika aktif.
-     */
     private function queryFastApiEngine(int $ingredientId, array $series, int $horizon = 7): ?array
     {
-        $serviceUrl = env('FORECASTING_SERVICE_URL', 'http://127.0.0.1:8001');
+        $serviceUrl = config('services.forecasting.url', 'http://127.0.0.1:8001');
 
         try {
             $response = Http::timeout(1.5)->post("{$serviceUrl}/forecast", [

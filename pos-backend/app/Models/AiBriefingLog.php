@@ -6,7 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class AiBriefingLog extends Model
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'briefing_date',
+        'admin_operational_payload',
+        'owner_executive_payload',
+        'llm_provider',
+        'email_sent_at',
+    ];
 
     protected function casts(): array
     {

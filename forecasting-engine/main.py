@@ -3,10 +3,13 @@ Arunika F&B POS - Smart Forecasting Microservice Engine
 Multi-tier Model Routing: AutoETS (Fast-Moving), Croston (Intermittent), WMA (Cold-Start)
 """
 
+import os
 import math
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException, Security, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security.api_key import APIKeyHeader
+from pydantic import BaseModel, Field, field_validator
 
 app = FastAPI(
     title="Arunika F&B Forecasting Engine",
@@ -14,10 +17,43 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# CORS middleware for secure inter-service or browser communication
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+API_KEY_NAME = "X-API-KEY"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+EXPECTED_API_KEY = os.getenv("FORECASTING_API_KEY", "")
+
 class ForecastRequest(BaseModel):
     ingredient_id: int
-    time_series: List[float] = Field(..., description="Histori pemakaian harian 14-90 hari (urutan kronologis)")
-    prediction_horizon: Optional[int] = Field(default=7, description="Jumlah hari proyeksi ke depan (default 7 hari)")
+    time_series: List[float] = Field(
+        ...,
+        max_length=365,
+        description="Histori pemakaian harian 14-90 hari (maksimal 365 hari, urutan kronologis)"
+    )
+    prediction_horizon: Optional[int] = Field(
+        default=7,
+        ge=1,
+        le=90,
+        description="Jumlah hari proyeksi ke depan (1-90 hari, default 7 hari)"
+    )
+
+    @field_validator("time_series")
+    @classmethod
+    def validate_series_values(cls, v: List[float]) -> List[float]:
+        cleaned = []
+        for x in v:
+            if math.isnan(x) or math.isinf(x) or x < 0:
+                cleaned.append(0.0)
+            else:
+                cleaned.append(float(x))
+        return cleaned
 
 class ForecastResponse(BaseModel):
     ingredient_id: int
@@ -115,7 +151,12 @@ def health_check():
 
 
 @app.post("/forecast", response_model=ForecastResponse)
-def generate_forecast(req: ForecastRequest):
+def generate_forecast(req: ForecastRequest, api_key: Optional[str] = Security(api_key_header)):
+    if EXPECTED_API_KEY and api_key != EXPECTED_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing X-API-KEY header"
+        )
     series = [float(x) for x in req.time_series]
     n = len(series)
     horizon = max(1, req.prediction_horizon)

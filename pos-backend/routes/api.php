@@ -25,12 +25,44 @@ use App\Http\Middleware\EnsureSuperAdmin;
 
 use Illuminate\Support\Facades\Route;
 
+// System Health Check
+Route::get('/health', function () {
+    $dbStatus = false;
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $dbStatus = true;
+    } catch (\Throwable $e) {
+        // DB connection error
+    }
+
+    $forecastingUrl = config('services.forecasting.url', 'http://127.0.0.1:8001');
+    $forecastingStatus = false;
+    try {
+        $res = \Illuminate\Support\Facades\Http::timeout(1.0)->get("{$forecastingUrl}/health");
+        $forecastingStatus = $res->successful();
+    } catch (\Throwable $e) {
+        // Forecasting microservice offline
+    }
+
+    $isHealthy = $dbStatus;
+
+    return response()->json([
+        'status' => $isHealthy ? 'healthy' : 'unhealthy',
+        'timestamp' => now()->toIso8601String(),
+        'services' => [
+            'database' => $dbStatus ? 'connected' : 'disconnected',
+            'forecasting_engine' => $forecastingStatus ? 'connected' : 'offline',
+        ],
+        'environment' => config('app.env'),
+    ], $isHealthy ? 200 : 503);
+});
+
 // Public routes untuk otentikasi staf & aplikasi tamu self-order (cafe-frontend)
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 Route::get('/public/settings', [SettingController::class, 'showPublic']);
 Route::get('/public/menu', [ProductController::class, 'publicMenu']);
 Route::get('/public/tables/{code}', [AdminTableController::class, 'publicValidateTable']);
-Route::post('/public/orders', [OrderController::class, 'publicCreateOrder']);
+Route::post('/public/orders', [OrderController::class, 'publicCreateOrder'])->middleware('throttle:30,1');
 Route::get('/public/orders/{id}/status', [OrderController::class, 'publicOrderStatus']);
 
 // Protected routes (Kasir, Koki, Admin, Owner)
@@ -83,6 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/cashier-sales', [ReportController::class, 'cashierSales']);
     Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss']);
     Route::get('/reports/export-csv', [ReportController::class, 'exportCsv']);
+    Route::get('/reports/export-excel', [ReportController::class, 'exportExcel']);
 
     // ==========================================
     // KHUSUS ROUTE ADMIN EXECUTIVE SUITE

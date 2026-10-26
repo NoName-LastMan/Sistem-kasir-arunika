@@ -7,7 +7,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ForecastSnapshot extends Model
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'forecast_date',
+        'ingredient_id',
+        'model_used',
+        'lead_time_days',
+        'current_stock',
+        'predicted_daily_burn',
+        'safety_stock_qty',
+        'days_until_stockout',
+        'recommended_reorder_qty',
+        'purchase_unit',
+        'recommended_purchase_packs',
+        'urgency_status',
+        'unit_cost_rp',
+        'estimated_reorder_cost_rp',
+        'actual_usage_yesterday',
+        'accuracy_percentage',
+    ];
 
     protected function casts(): array
     {
