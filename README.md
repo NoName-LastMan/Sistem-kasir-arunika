@@ -57,7 +57,7 @@ graph TD
 
 ---
 
-## 🧠 Rasional Pemilihan Bahasa Pemrograman (Kriteria Penilaian Juri)
+## 🧠 Rasional Pemilihan Bahasa Pemrograman 
 
 Sistem Arunika POS Suite menerapkan arsitektur **Polyglot Engineering** dengan membagi beban komputasi ke 3 bahasa pemrograman berbeda (**PHP 8.5**, **JavaScript / ECMAScript Modern**, dan **Python 3.11+**).
 
