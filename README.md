@@ -61,7 +61,7 @@ graph TD
 
 Sistem Arunika POS Suite menerapkan arsitektur **Polyglot Engineering** dengan membagi beban komputasi ke 3 bahasa pemrograman berbeda (**PHP 8.5**, **JavaScript / ECMAScript Modern**, dan **Python 3.11+**).
 
-Pendekatan ini dipilih secara terencana untuk menghindari kelemahan anti-pola _"Golden Hammer"_ (memaksakan satu bahasa untuk semua problem domain). Bagi dewan juri, arsitektur ini membuktikan kematangan rekayasa perangkat lunak (_sound software engineering trade-offs_) dengan pembagian tanggung jawab (_separation of concerns_) yang optimal:
+Pendekatan ini dipilih secara terencana untuk menghindari kelemahan anti-pola _"Golden Hammer"_ (memaksakan satu bahasa untuk semua problem domain). arsitektur ini membuktikan kematangan rekayasa perangkat lunak (_sound software engineering trade-offs_) dengan pembagian tanggung jawab (_separation of concerns_) yang optimal:
 
 | Bahasa Pemrograman      | Domain Peran Sistem                 | Karakteristik Kunci                                       | Nilai Strategis Penilaian Juri (_Why This Language?_)                                                                                                                           |
 | :---------------------- | :---------------------------------- | :-------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
