@@ -33,3 +33,18 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Databases & local storage
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-wal
+*.sqlite-shm
+storage/app/backups/
+storage/app/private/
+
+# Credentials, keys & certificates
+*.pem
+*.key
+*.crt
+*.pfx
+
