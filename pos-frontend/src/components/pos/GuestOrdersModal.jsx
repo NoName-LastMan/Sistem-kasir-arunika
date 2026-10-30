@@ -74,6 +74,25 @@ export function GuestOrdersModal({ isOpen, onClose, onOrderConfirmed }) {
     }
   }
 
+  const handleCancelOrder = async () => {
+    if (!selectedOrder) return
+    const reason = window.prompt(`Masukkan alasan pembatalan untuk nota ${selectedOrder.invoice_number}:`, 'Dibatalkan oleh kasir')
+    if (!reason) return
+
+    setConfirming(true)
+    setError(null)
+    try {
+      await api.post(`/orders/${selectedOrder.id}/cancel`, { reason })
+      playAlertBeep()
+      setSelectedOrder(null)
+      fetchPendingOrders()
+    } catch (err) {
+      setError(err.message || 'Gagal membatalkan pesanan tamu')
+    } finally {
+      setConfirming(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-forest-950/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-warm-lg border border-pine-200 overflow-hidden">
@@ -202,9 +221,17 @@ export function GuestOrdersModal({ isOpen, onClose, onOrderConfirmed }) {
                 <button
                   type="button"
                   onClick={() => setSelectedOrder(null)}
-                  className="px-4 py-2.5 rounded-xl border border-pine-200 text-xs font-semibold"
+                  className="px-3.5 py-2.5 rounded-xl border border-pine-200 text-xs font-semibold"
                 >
-                  Kembali ke Daftar
+                  Kembali
+                </button>
+                <button
+                  type="button"
+                  disabled={confirming}
+                  onClick={handleCancelOrder}
+                  className="px-3.5 py-2.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition cursor-pointer"
+                >
+                  Tolak Pesanan
                 </button>
                 <button
                   type="button"

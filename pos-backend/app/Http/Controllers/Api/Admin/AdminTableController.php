@@ -11,7 +11,16 @@ class AdminTableController extends Controller
 {
     public function index()
     {
-        $tables = Table::orderBy('table_number')->get();
+        $tables = Table::orderBy('table_number')->get()->map(function ($table) {
+            $hasActiveOrder = \App\Models\Order::where('table_id', $table->id)
+                ->whereIn('status', ['pending', 'processing'])
+                ->exists();
+
+            if ($hasActiveOrder && $table->status === 'available') {
+                $table->status = 'occupied';
+            }
+            return $table;
+        });
 
         return response()->json([
             'message' => 'Daftar meja restoran',
@@ -65,7 +74,15 @@ class AdminTableController extends Controller
      */
     public function publicValidateTable($code)
     {
-        $table = Table::where('table_number', $code)->first();
+        $codeTrimmed = trim((string) $code);
+        $cleanDigits = ltrim($codeTrimmed, 'MmLl0');
+        $mPadded = 'M' . str_pad($cleanDigits, 2, '0', STR_PAD_LEFT);
+
+        $table = Table::where('table_number', $codeTrimmed)
+            ->orWhere('table_number', strtoupper($codeTrimmed))
+            ->orWhere('table_number', $mPadded)
+            ->first();
+
         if (! $table) {
             return response()->json([
                 'is_valid' => false,

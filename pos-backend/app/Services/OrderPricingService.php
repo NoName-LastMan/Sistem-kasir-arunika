@@ -91,8 +91,8 @@ class OrderPricingService
      */
     public function calculateOrderPricing(
         array   $items,
-        ?string $discountType,
-        ?float  $discountValue,
+        ?string $discountType = null,
+        ?float  $discountValue = null,
         float   $taxRate = 10.0,
         ?float  $cashTendered = null,
         ?string $paymentMethod = null,

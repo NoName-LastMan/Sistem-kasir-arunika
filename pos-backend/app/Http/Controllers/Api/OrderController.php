@@ -77,6 +77,8 @@ class OrderController extends Controller
         $validated = $request->validate([
             'order_type'             => 'required|in:dine_in,takeaway,delivery',
             'table_id'               => 'nullable|exists:tables,id',
+            'customer_name'          => 'nullable|string|max:100',
+            'notes'                  => 'nullable|string|max:500',
             'payment_method'         => 'required|in:cash,qris,transfer,card',
             'cash_tendered'          => 'nullable|numeric|min:0',
             'discount_type'          => 'nullable|in:fixed,percentage,none',
@@ -113,6 +115,8 @@ class OrderController extends Controller
                 'user_id'         => $request->user()->id,
                 'shift_id'        => $activeShift?->id,
                 'table_id'        => $validated['table_id'] ?? null,
+                'customer_name'   => $validated['customer_name'] ?? null,
+                'notes'           => $validated['notes'] ?? null,
                 'order_type'      => $validated['order_type'],
                 'subtotal'        => $pricing['subtotal'],
                 'discount_amount' => $pricing['discount_amount'],
@@ -157,7 +161,7 @@ class OrderController extends Controller
 
             return response()->json([
                 'message' => 'Transaksi berhasil diproses',
-                'data'    => $order->load(['user:id,name', 'table:id,number', 'items.product', 'items.modifiers.modifierItem'])
+                'data'    => $order->load(['user:id,name', 'table:id,table_number', 'items.product', 'items.modifiers.modifierItem'])
             ], 201);
         });
     }
@@ -171,9 +175,9 @@ class OrderController extends Controller
             'void_reason' => 'required|string|min:3|max:500',
         ]);
 
-        if ($order->status !== 'completed') {
+        if ($order->status === 'cancelled') {
             return response()->json([
-                'message' => 'Hanya order dengan status completed yang dapat di-void.'
+                'message' => 'Pesanan ini sudah dibatalkan sebelumnya.'
             ], 422);
         }
 
@@ -185,25 +189,43 @@ class OrderController extends Controller
 
         $user = $request->user();
 
-        if ($order->user_id !== $user->id && $user->role !== 'admin') {
+        if ($order->user_id !== $user->id && !in_array($user->role, ['admin', 'superadmin'])) {
             return response()->json([
-                'message' => 'Anda tidak memiliki izin untuk void order ini.'
+                'message' => 'Anda tidak memiliki izin untuk membatalkan order ini.'
             ], 403);
         }
 
         return DB::transaction(function () use ($order, $validated, $user) {
+            $wasDeducted = in_array($order->status, ['completed', 'processing']);
+            $wasPaid     = $order->payment_status === 'paid';
+
             $order->update([
                 'status'         => 'cancelled',
-                'payment_status' => 'refunded',
+                'payment_status' => $wasPaid ? 'refunded' : $order->payment_status,
                 'void_reason'    => $validated['void_reason'],
                 'voided_at'      => now(),
                 'voided_by'      => $user->id,
             ]);
 
-            app(InventoryService::class)->restoreForVoid($order, $user->id);
+            // Pulihkan stok jika stok sebelumnya sudah terpotong (completed / processing)
+            if ($wasDeducted) {
+                app(InventoryService::class)->restoreForVoid($order, $user->id);
+            }
+
+            // Kembalikan status meja ke available jika tidak ada pesanan aktif lain
+            if ($order->table_id) {
+                $hasOtherActive = Order::where('table_id', $order->table_id)
+                    ->where('id', '!=', $order->id)
+                    ->whereIn('status', ['pending', 'processing'])
+                    ->exists();
+
+                if (! $hasOtherActive) {
+                    \App\Models\Table::where('id', $order->table_id)->update(['status' => 'available']);
+                }
+            }
 
             return response()->json([
-                'message' => 'Order berhasil di-void dan stok dikembalikan.',
+                'message' => 'Order berhasil dibatalkan dan status meja/stok telah disesuaikan.',
                 'data'    => $order->load([
                     'user:id,name',
                     'items.product:id,name,stock,track_stock',
@@ -211,6 +233,22 @@ class OrderController extends Controller
                 ])
             ]);
         });
+    }
+
+    /**
+     * Kasir / Admin menolak atau membatalkan pesanan pending / processing.
+     */
+    public function cancel(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $request->merge([
+            'void_reason' => $validated['reason'] ?? 'Dibatalkan oleh staf kasir'
+        ]);
+
+        return $this->void($request, $order);
     }
 
     /**
@@ -268,6 +306,11 @@ class OrderController extends Controller
                 userId: $request->user()->id,
             );
 
+            // Tandai meja sebagai occupied jika pesanan terhubung ke meja
+            if ($order->table_id) {
+                \App\Models\Table::where('id', $order->table_id)->update(['status' => 'occupied']);
+            }
+
             return response()->json([
                 'message' => 'Pesanan berhasil dikonfirmasi dan diteruskan ke dapur',
                 'data'    => $order->load(['user:id,name', 'table:id,table_number', 'items.product', 'items.modifiers.modifierItem'])
@@ -280,7 +323,37 @@ class OrderController extends Controller
      */
     public function serve(Order $order)
     {
+        if ($order->status === 'cancelled') {
+            return response()->json([
+                'message' => 'Pesanan yang sudah dibatalkan tidak dapat disajikan.'
+            ], 422);
+        }
+
+        if ($order->status === 'completed') {
+            return response()->json([
+                'message' => 'Pesanan sudah disajikan sebelumnya.'
+            ], 422);
+        }
+
+        if ($order->status !== 'processing') {
+            return response()->json([
+                'message' => 'Hanya pesanan dengan status processing yang dapat disajikan.'
+            ], 422);
+        }
+
         $order->update(['status' => 'completed']);
+
+        // Kembalikan meja ke available jika tidak ada pesanan aktif lain di meja ini
+        if ($order->table_id) {
+            $hasOtherActive = Order::where('table_id', $order->table_id)
+                ->where('id', '!=', $order->id)
+                ->whereIn('status', ['pending', 'processing'])
+                ->exists();
+
+            if (! $hasOtherActive) {
+                \App\Models\Table::where('id', $order->table_id)->update(['status' => 'available']);
+            }
+        }
 
         return response()->json([
             'message' => 'Pesanan selesai dimasak dan siap disajikan',
@@ -308,7 +381,14 @@ class OrderController extends Controller
 
         $tableId = $validated['table_id'] ?? null;
         if (! $tableId && ! empty($validated['table_code'])) {
-            $table = \App\Models\Table::where('table_number', $validated['table_code'])->first();
+            $codeTrimmed = trim((string) $validated['table_code']);
+            $cleanDigits = ltrim($codeTrimmed, 'MmLl0');
+            $mPadded = 'M' . str_pad($cleanDigits, 2, '0', STR_PAD_LEFT);
+
+            $table = \App\Models\Table::where('table_number', $codeTrimmed)
+                ->orWhere('table_number', strtoupper($codeTrimmed))
+                ->orWhere('table_number', $mPadded)
+                ->first();
             $tableId = $table?->id;
         }
 
@@ -344,6 +424,8 @@ class OrderController extends Controller
                 'user_id'         => $defaultUser->id,
                 'shift_id'        => null,
                 'table_id'        => $tableId,
+                'customer_name'   => $validated['customer_name'] ?? null,
+                'notes'           => $validated['notes'] ?? null,
                 'order_type'      => $tableId ? 'dine_in' : 'takeaway',
                 'subtotal'        => $pricing['subtotal'],
                 'discount_amount' => 0,

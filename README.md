@@ -5,7 +5,7 @@
 [![React 18](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Docker Ready](https://img.shields.io/badge/Docker-Orchestrated-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
-[![Tests Passing](https://img.shields.io/badge/Automated_Tests-60_Passed-success?style=for-the-badge&logo=checkmarx&logoColor=white)](#-pengujian-otomatis-automated-tests)
+[![Tests Passing](https://img.shields.io/badge/Automated_Tests-67_Passed-success?style=for-the-badge&logo=checkmarx&logoColor=white)](#-pengujian-otomatis-automated-tests)
 
 Ekosistem **Point of Sale (POS)** dan **Enterprise Resource Planning (ERP) Mini** berbasis web modern yang dirancang khusus untuk operasional industri _Food & Beverage_ (F&B) seperti kafe, kedai kopi, warmindo, dan restoran.
 
@@ -248,7 +248,7 @@ npm run dev
 Semua komponen dilengkapi test suite otomatis dan lulus pengujian 100%:
 
 ```bash
-# 1. Jalankan Unit & Feature Test Backend Laravel (52 Test Cases)
+# 1. Jalankan Unit & Feature Test Backend Laravel (59 Test Cases)
 cd pos-backend && php artisan test
 
 # 2. Jalankan Unit Test Model Matematika Forecasting (8 Test Cases)
@@ -261,7 +261,7 @@ cd ../cafe-frontend && npm run build
 
 Hasil verifikasi lokal & CI:
 
-- **Backend Test Suite**: `52 passed, 221 assertions (100% Green)`
+- **Backend Test Suite**: `59 passed, 253 assertions (100% Green)`
 - **Forecasting Microservice Suite**: `8 passed (0.042s)`
 - **Frontend Bundling**: `0 errors, Vite production bundle valid`
 
@@ -305,7 +305,7 @@ Sistem-kasir-arunika/
 │   ├── app/Models/                # 17 Model Eloquent ($fillable eksplisit)
 │   ├── app/Services/              # Service Layer (Pricing, Inventory, Reconcile, Forecast)
 │   ├── routes/                    # API Routes & Console Schedulers
-│   ├── tests/                     # 51 Unit & Feature Test Cases
+│   ├── tests/                     # 59 Unit & Feature Test Cases
 │   └── Dockerfile
 ├── pos-frontend/                  # Backoffice & POS Kasir (React 18 + Tailwind)
 │   ├── src/                       # Layar Kasir, KDS, Error Boundary, Mutasi Stok

@@ -4,14 +4,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Order extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'invoice_number',
         'user_id',
         'shift_id',
         'table_id',
+        'customer_name',
+        'notes',
         'order_type',
         'subtotal',
         'tax_amount',

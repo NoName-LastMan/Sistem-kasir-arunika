@@ -19,6 +19,12 @@ services:
     volumes:
       - backend-storage:/var/www/storage
       - backend-db:/var/www/database
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       forecasting-engine:
         condition: service_healthy
@@ -52,7 +58,8 @@ services:
     ports:
       - "5173:80"
     depends_on:
-      - pos-backend
+      pos-backend:
+        condition: service_healthy
     networks:
       - arunika-network
 
@@ -65,7 +72,8 @@ services:
     ports:
       - "5174:80"
     depends_on:
-      - pos-backend
+      pos-backend:
+        condition: service_healthy
     networks:
       - arunika-network
 

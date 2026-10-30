@@ -22,7 +22,7 @@ class InventoryService
         ?string $referenceNote = null,
     ): StockMutation {
         return DB::transaction(function () use ($productId, $type, $quantity, $userId, $referenceNote) {
-            $product     = Product::findOrFail($productId);
+            $product     = Product::lockForUpdate()->findOrFail($productId);
             $stockBefore = (int) $product->stock;
             $qtyInput    = abs($quantity);
 
@@ -74,18 +74,21 @@ class InventoryService
             return null;
         }
 
-        if (! $product->hasEnoughStock($quantity)) {
+        $freshProduct = Product::where('id', $product->id)->lockForUpdate()->first() ?? $product;
+
+        if (! $freshProduct->hasEnoughStock($quantity)) {
             throw ValidationException::withMessages([
                 'items' => [
-                    "Stok tidak mencukupi untuk produk: {$product->name} (Sisa: {$product->stock})",
+                    "Stok tidak mencukupi untuk produk: {$freshProduct->name} (Sisa: {$freshProduct->stock})",
                 ],
             ]);
         }
 
-        $stockBefore = (int) $product->stock;
+        $stockBefore = (int) $freshProduct->stock;
         $stockAfter  = $stockBefore - $quantity;
 
-        $product->update(['stock' => $stockAfter]);
+        $freshProduct->update(['stock' => $stockAfter]);
+        $product->forceFill(['stock' => $stockAfter])->syncOriginal();
 
         return StockMutation::create([
             'product_id'     => $product->id,
@@ -208,22 +211,24 @@ class InventoryService
                     continue;
                 }
 
-                $stockBefore = (float) $ingredient->stock_quantity;
+                $lockedIngredient = Ingredient::where('id', $ingredient->id)->lockForUpdate()->first() ?? $ingredient;
+                $stockBefore = (float) $lockedIngredient->stock_quantity;
 
                 if ($stockBefore < $totalNeeded) {
                     throw ValidationException::withMessages([
                         'items' => [
-                            "Stok bahan {$ingredient->name} tidak mencukupi (Sisa: {$stockBefore} {$ingredient->base_unit})",
+                            "Stok bahan {$lockedIngredient->name} tidak mencukupi (Sisa: {$stockBefore} {$lockedIngredient->base_unit})",
                         ],
                     ]);
                 }
 
                 $stockAfter = round($stockBefore - $totalNeeded, 3);
 
-                $ingredient->update(['stock_quantity' => $stockAfter]);
+                $lockedIngredient->update(['stock_quantity' => $stockAfter]);
+                $ingredient->forceFill(['stock_quantity' => $stockAfter])->syncOriginal();
 
                 $mutations[] = StockMutation::create([
-                    'ingredient_id'  => $ingredient->id,
+                    'ingredient_id'  => $lockedIngredient->id,
                     'user_id'        => $userId,
                     'type'           => StockMutation::TYPE_OUT,
                     'quantity'       => -$totalNeeded,
@@ -264,13 +269,15 @@ class InventoryService
                 $conversionFactor = (float) $ingredient->pivot->conversion_factor;
                 $totalToRestore = $quantityNeeded * $conversionFactor * $item->quantity;
 
-                $stockBefore = (float) $ingredient->stock_quantity;
+                $lockedIngredient = Ingredient::where('id', $ingredient->id)->lockForUpdate()->first() ?? $ingredient;
+                $stockBefore = (float) $lockedIngredient->stock_quantity;
                 $stockAfter = round($stockBefore + $totalToRestore, 3);
 
-                $ingredient->update(['stock_quantity' => $stockAfter]);
+                $lockedIngredient->update(['stock_quantity' => $stockAfter]);
+                $ingredient->forceFill(['stock_quantity' => $stockAfter])->syncOriginal();
 
                 $mutations[] = StockMutation::create([
-                    'ingredient_id'  => $ingredient->id,
+                    'ingredient_id'  => $lockedIngredient->id,
                     'user_id'        => $userId,
                     'type'           => StockMutation::TYPE_IN,
                     'quantity'       => $totalToRestore,

@@ -89,6 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{order}/confirm', [OrderController::class, 'confirm']);
     Route::post('/orders/{order}/serve', [OrderController::class, 'serve']);
     Route::post('/orders/{order}/void', [OrderController::class, 'void']);
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
 
     // Hold Order (Simpan Sementara Transaksi)
