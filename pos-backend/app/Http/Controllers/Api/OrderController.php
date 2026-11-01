@@ -14,6 +14,20 @@ use Illuminate\Support\Str;
 class OrderController extends Controller
 {
     /**
+     * Hitung jumlah pesanan pending hari ini secara sangat ringan (untuk polling kasir).
+     */
+    public function pendingCount()
+    {
+        $count = Order::where('status', 'pending')
+            ->whereDate('created_at', now()->toDateString())
+            ->count();
+
+        return response()->json([
+            'count' => $count
+        ]);
+    }
+
+    /**
      * Menampilkan daftar transaksi/order terakhir.
      */
     public function index(Request $request)

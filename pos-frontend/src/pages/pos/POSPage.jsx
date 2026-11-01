@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../api/client'
 import { useAuthStore } from '../../stores/authStore'
@@ -70,29 +70,43 @@ export function POSPage() {
     fetchProducts()
     checkPendingGuestOrders()
 
-    const interval = setInterval(checkPendingGuestOrders, 7000)
-    return () => clearInterval(interval)
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        checkPendingGuestOrders()
+      }
+    }, 10000)
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkPendingGuestOrders()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
 
   const checkPendingGuestOrders = async () => {
+    if (document.hidden) return
     try {
-      const res = await api.get('/orders?status=pending&today_only=1')
-      const list = res.data?.data || res.data || res || []
-      if (list.length > pendingGuestCount && pendingGuestCount > 0) {
+      const res = await api.get('/orders/pending-count')
+      const count = typeof res?.count === 'number' ? res.count : (res?.data?.count ?? 0)
+      if (count > pendingGuestCount && pendingGuestCount > 0) {
         playSuccessChime()
       }
-      setPendingGuestCount(list.length)
+      setPendingGuestCount(count)
     } catch {
       // ignore
     }
   }
 
-  const fetchProducts = async (catId = null) => {
+  const fetchProducts = async () => {
     setLoadingProducts(true)
     try {
-      let url = '/products'
-      if (catId) url += `?category_id=${catId}`
-      const res = await api.get(url)
+      const res = await api.get('/products')
       setProducts(res.data || res || [])
     } catch {
       setProducts([])
@@ -103,7 +117,6 @@ export function POSPage() {
 
   const handleCategoryClick = (catId) => {
     setSelectedCategory(catId)
-    fetchProducts(catId)
   }
 
   // Barcode scanner integration
@@ -158,15 +171,20 @@ export function POSPage() {
     setShowReceiptModal(true)
   }
 
-  // Filtered products by search
-  const filteredProducts = products.filter(p => {
-    const q = searchQuery.toLowerCase()
-    return (
-      p.name?.toLowerCase().includes(q) ||
-      p.sku?.toLowerCase().includes(q) ||
-      p.barcode?.toLowerCase().includes(q)
-    )
-  })
+  // Filtered products by search & category (Memoized to prevent render lag)
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return products.filter(p => {
+      const matchesCategory = !selectedCategory || p.category_id === selectedCategory
+      if (!matchesCategory) return false
+      if (!q) return true
+      return (
+        p.name?.toLowerCase().includes(q) ||
+        p.sku?.toLowerCase().includes(q) ||
+        p.barcode?.toLowerCase().includes(q)
+      )
+    })
+  }, [products, selectedCategory, searchQuery])
 
   const totals = getTotals()
 

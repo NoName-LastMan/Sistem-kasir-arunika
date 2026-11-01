@@ -152,14 +152,7 @@ def health_check():
         "supported_models": ["AutoETS", "Croston", "WMA_Fallback"]
     }
 
-
-@app.post("/forecast", response_model=ForecastResponse)
-def generate_forecast(req: ForecastRequest, api_key: Optional[str] = Security(api_key_header)):
-    if EXPECTED_API_KEY and api_key != EXPECTED_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing X-API-KEY header"
-        )
+def _process_single_forecast(req: ForecastRequest) -> ForecastResponse:
     series = [float(x) for x in req.time_series]
     n = len(series)
     horizon = max(1, req.prediction_horizon)
@@ -203,3 +196,23 @@ def generate_forecast(req: ForecastRequest, api_key: Optional[str] = Security(ap
         predicted_horizon_demand=predicted_demand,
         confidence_interval_p90=ci
     )
+
+
+@app.post("/forecast", response_model=ForecastResponse)
+def generate_forecast(req: ForecastRequest, api_key: Optional[str] = Security(api_key_header)):
+    if EXPECTED_API_KEY and api_key != EXPECTED_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing X-API-KEY header"
+        )
+    return _process_single_forecast(req)
+
+
+@app.post("/forecast/batch", response_model=List[ForecastResponse])
+def generate_forecast_batch(items: List[ForecastRequest], api_key: Optional[str] = Security(api_key_header)):
+    if EXPECTED_API_KEY and api_key != EXPECTED_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing X-API-KEY header"
+        )
+    return [_process_single_forecast(item) for item in items]

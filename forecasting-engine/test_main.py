@@ -82,5 +82,18 @@ class TestForecastingEngine(unittest.TestCase):
         data = response.json()
         self.assertGreaterEqual(data["daily_burn_rate"], 0)
 
+    def test_forecast_batch_endpoint(self):
+        payload = [
+            {"ingredient_id": 10, "time_series": [1.0, 2.0, 3.0], "prediction_horizon": 5},
+            {"ingredient_id": 20, "time_series": [], "prediction_horizon": 7}
+        ]
+        response = client.post("/forecast/batch", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["ingredient_id"], 10)
+        self.assertEqual(data[1]["ingredient_id"], 20)
+        self.assertEqual(data[1]["model_used"], "NoData")
+
 if __name__ == "__main__":
     unittest.main()

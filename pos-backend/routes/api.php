@@ -84,6 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/products/{product}', [ProductController::class, 'show']);
 
     // Transaksi POS, Konfirmasi Kasir, Dapur & Riwayat Order
+    Route::get('/orders/pending-count', [OrderController::class, 'pendingCount']);
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::post('/orders/{order}/confirm', [OrderController::class, 'confirm']);

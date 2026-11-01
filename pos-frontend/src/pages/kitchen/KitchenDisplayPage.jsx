@@ -46,12 +46,28 @@ export function KitchenDisplayPage() {
     }
   }
 
-  // Polling every 6 seconds
+  // Smart Polling with Tab Visibility Guard (stops polling when tab is inactive)
   useEffect(() => {
     fetchKitchenOrders()
-    const timer = setInterval(fetchKitchenOrders, 6000)
-    return () => clearInterval(timer)
-  }, [soundEnabled, completedTickets])
+
+    const timer = setInterval(() => {
+      if (!document.hidden) {
+        fetchKitchenOrders()
+      }
+    }, 8000)
+
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        fetchKitchenOrders()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [soundEnabled])
 
   const handleMarkReady = async (orderId) => {
     playSuccessChime()

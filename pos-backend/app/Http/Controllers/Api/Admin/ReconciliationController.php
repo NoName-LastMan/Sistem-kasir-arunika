@@ -15,20 +15,39 @@ class ReconciliationController extends Controller
     public function expectedStock(Request $request)
     {
         $request->validate([
-            'ingredient_id' => 'required|exists:ingredients,id',
+            'ingredient_id' => 'nullable|exists:ingredients,id',
             'start_date'    => 'nullable|date',
             'end_date'      => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        $result = $this->reconciliationService->calculateExpectedStock(
-            ingredientId: $request->ingredient_id,
-            startDate:    $request->start_date,
-            endDate:      $request->end_date,
-        );
+        if ($request->filled('ingredient_id')) {
+            $result = $this->reconciliationService->calculateExpectedStock(
+                ingredientId: (int) $request->ingredient_id,
+                startDate:    $request->start_date,
+                endDate:      $request->end_date,
+            );
+
+            return response()->json([
+                'message' => 'Perhitungan stok seharusnya',
+                'data'    => $result,
+            ]);
+        }
+
+        // Jika tidak ada ingredient_id spesifik, kembalikan daftar seluruh bahan untuk opname
+        $ingredients = \App\Models\Ingredient::orderBy('name')->get();
+        $list = $ingredients->map(function ($ing) {
+            return [
+                'id'             => $ing->id,
+                'name'           => $ing->name,
+                'unit'           => $ing->base_unit ?? $ing->unit ?? 'pcs',
+                'stock'          => (float) $ing->stock_quantity,
+                'expected_stock' => (float) $ing->stock_quantity,
+            ];
+        });
 
         return response()->json([
-            'message' => 'Perhitungan stok seharusnya',
-            'data'    => $result,
+            'message' => 'Daftar stok ekspektasi seluruh bahan',
+            'data'    => $list,
         ]);
     }
 
