@@ -1,6 +1,8 @@
 /.commandcode/
 /.agents/
 /.graphify-out/
+/graphify-out/
+graphify-out/
 
 # Environment files
 .env
