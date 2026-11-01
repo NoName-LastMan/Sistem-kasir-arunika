@@ -138,11 +138,37 @@ class StockForecastingService
             ->get()
             ->pluck('total_consumed', 'ingredient_id');
 
+        // Siapkan time series untuk seluruh bahan sekaligus untuk batch prediction (1 HTTP request)
+        $batchPayload = [];
+        foreach ($ingredients as $ingredient) {
+            $dailyLogs = $mutations->get($ingredient->id, collect());
+            $cMap = [];
+            for ($i = 0; $i < self::HISTORICAL_DAYS; $i++) {
+                $d = $targetDate->copy()->subDays(self::HISTORICAL_DAYS - 1 - $i)->toDateString();
+                $cMap[$d] = 0.0;
+            }
+            foreach ($dailyLogs as $log) {
+                if (isset($cMap[$log->mutation_date])) {
+                    $cMap[$log->mutation_date] = (float) $log->total_consumed;
+                }
+            }
+            $leadTime = max(1, (int) ($ingredient->lead_time_days ?: 7));
+            $batchPayload[] = [
+                'ingredient_id'      => $ingredient->id,
+                'time_series'        => array_values($cMap),
+                'prediction_horizon' => $leadTime,
+            ];
+        }
+
+        // Panggil batch forecast mikroservis dalam 1 kali HTTP request
+        $fastApiBatchResults = $this->queryFastApiEngineBatch($batchPayload);
+
         $createdSnapshots = collect();
 
         foreach ($ingredients as $ingredient) {
             $dailyLogs = $mutations->get($ingredient->id, collect());
-            $metrics = $this->calculateMultiTierMetrics($ingredient, $dailyLogs, $targetDate);
+            $precomputedFastApi = $fastApiBatchResults[$ingredient->id] ?? null;
+            $metrics = $this->calculateMultiTierMetrics($ingredient, $dailyLogs, $targetDate, $precomputedFastApi);
 
             // Hitung evaluasi akurasi (100 - WAPE) jika ada prediksi kemarin
             $actualYesterday = isset($yesterdayUsage[$ingredient->id]) ? (float) $yesterdayUsage[$ingredient->id] : 0.0;
@@ -204,7 +230,12 @@ class StockForecastingService
      * - Tier 2: Intermittent / Slow-Moving (Croston's Method)
      * - Tier 3: Cold-Start (<14 data points: WMA + Multiplier)
      */
-    public function calculateMultiTierMetrics(Ingredient $ingredient, Collection $dailyLogs, Carbon $targetDate): array
+    public function calculateMultiTierMetrics(
+        Ingredient $ingredient,
+        Collection $dailyLogs,
+        Carbon $targetDate,
+        ?array $precomputedFastApiResult = null
+    ): array
     {
         $currentStock = (float) ($ingredient->current_stock ?? $ingredient->stock_quantity ?? 0);
 
@@ -226,8 +257,8 @@ class StockForecastingService
         $nonZeroRatio = count($series) > 0 ? $nonZeroCount / count($series) : 0;
         $leadTime = max(1, (int) ($ingredient->lead_time_days ?: 7));
 
-        // Cek Python FastAPI Microservice jika aktif
-        $fastApiResult = $this->queryFastApiEngine($ingredient->id, $series, $leadTime);
+        // Gunakan hasil precomputed batch jika tersedia, atau query single FastAPI jika tidak
+        $fastApiResult = $precomputedFastApiResult ?: $this->queryFastApiEngine($ingredient->id, $series, $leadTime);
         if ($fastApiResult) {
             $predictedBurn = (float) $fastApiResult['daily_burn_rate'];
             $safetyStock = (float) $fastApiResult['safety_stock_qty'];
@@ -404,6 +435,39 @@ class StockForecastingService
         }
 
         return null;
+    }
+
+    /**
+     * Batch request ke mikroservis FastAPI untuk seluruh bahan baku dalam 1 kali HTTP call.
+     */
+    private function queryFastApiEngineBatch(array $batchPayload): array
+    {
+        if (empty($batchPayload)) {
+            return [];
+        }
+
+        $serviceUrl = config('services.forecasting.url', 'http://127.0.0.1:8001');
+
+        try {
+            $response = Http::timeout(4.0)->post("{$serviceUrl}/forecast/batch", $batchPayload);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $mapped = [];
+                if (is_array($data)) {
+                    foreach ($data as $item) {
+                        if (isset($item['ingredient_id'])) {
+                            $mapped[$item['ingredient_id']] = $item;
+                        }
+                    }
+                }
+                return $mapped;
+            }
+        } catch (\Throwable $e) {
+            // Silently fallback to internal computation
+        }
+
+        return [];
     }
 
     /**

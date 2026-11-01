@@ -10,6 +10,7 @@ class ReconciliationService
 {
     /**
      * Hitung stok seharusnya berdasarkan mutasi stok.
+     * Menggunakan query agregasi SQL langsung untuk efisiensi CPU & memori.
      */
     public function calculateExpectedStock(int $ingredientId, ?string $startDate = null, ?string $endDate = null): array
     {
@@ -25,10 +26,13 @@ class ReconciliationService
             $query->whereDate('created_at', '<=', $endDate);
         }
 
-        $mutations = $query->get();
+        $totals = (clone $query)->selectRaw("
+            COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END), 0) as total_in,
+            COALESCE(SUM(CASE WHEN quantity < 0 THEN ABS(quantity) ELSE 0 END), 0) as total_out
+        ")->first();
 
-        $totalIn = (float) $mutations->where('quantity', '>', 0)->sum('quantity');
-        $totalOut = abs((float) $mutations->where('quantity', '<', 0)->sum('quantity'));
+        $totalIn = (float) ($totals->total_in ?? 0);
+        $totalOut = (float) ($totals->total_out ?? 0);
 
         // Get initial stock (stock at startDate)
         $initialStock = (float) $ingredient->stock_quantity;
@@ -108,28 +112,72 @@ class ReconciliationService
 
     /**
      * Ambil laporan rekonsiliasi untuk semua bahan baku.
+     * Menggunakan batch query agregasi untuk memangkas ratusan query N+1 menjadi hanya 2 query.
      */
     public function getReconciliationReport(?string $startDate = null, ?string $endDate = null): array
     {
-        $ingredients = Ingredient::where('track_stock', true)->get();
-        $report = [];
+        $ingredients = Ingredient::where('track_stock', true)->orderBy('name')->get();
+        if ($ingredients->isEmpty()) {
+            return [];
+        }
 
+        $ingredientIds = $ingredients->pluck('id')->all();
+
+        // 1. Agregasi mutasi (in & out) untuk seluruh bahan sekaligus dalam 1 query SQL
+        $mutationQuery = StockMutation::whereIn('ingredient_id', $ingredientIds);
+        if ($startDate) {
+            $mutationQuery->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $mutationQuery->whereDate('created_at', '<=', $endDate);
+        }
+
+        $totalsMap = $mutationQuery->selectRaw("
+            ingredient_id,
+            COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END), 0) as total_in,
+            COALESCE(SUM(CASE WHEN quantity < 0 THEN ABS(quantity) ELSE 0 END), 0) as total_out
+        ")->groupBy('ingredient_id')->get()->keyBy('ingredient_id');
+
+        // 2. Ambil stok awal periode jika startDate dispesifikasikan (hanya 1 query batch)
+        $firstMutationMap = [];
+        if ($startDate) {
+            $firstMuts = StockMutation::whereIn('ingredient_id', $ingredientIds)
+                ->whereDate('created_at', '>=', $startDate)
+                ->orderBy('created_at', 'asc')
+                ->get()
+                ->groupBy('ingredient_id');
+
+            foreach ($firstMuts as $ingId => $muts) {
+                $firstMutationMap[$ingId] = (float) $muts->first()->stock_before;
+            }
+        }
+
+        $report = [];
         foreach ($ingredients as $ingredient) {
-            $expected = $this->calculateExpectedStock($ingredient->id, $startDate, $endDate);
-            $discrepancy = round((float) $ingredient->stock_quantity - $expected['expected_stock'], 3);
-            $discrepancyPercent = $expected['expected_stock'] > 0
-                ? round(abs($discrepancy) / $expected['expected_stock'] * 100, 2)
+            $tot = $totalsMap->get($ingredient->id);
+            $totalIn = (float) ($tot?->total_in ?? 0);
+            $totalOut = (float) ($tot?->total_out ?? 0);
+
+            $initialStock = isset($firstMutationMap[$ingredient->id])
+                ? $firstMutationMap[$ingredient->id]
+                : (float) $ingredient->stock_quantity;
+
+            $expectedStock = round($initialStock + $totalIn - $totalOut, 3);
+            $currentStock  = (float) $ingredient->stock_quantity;
+            $discrepancy   = round($currentStock - $expectedStock, 3);
+            $discrepancyPercent = $expectedStock > 0
+                ? round(abs($discrepancy) / $expectedStock * 100, 2)
                 : 0;
 
             $report[] = [
-                'ingredient_id' => $ingredient->id,
-                'ingredient_name' => $ingredient->name,
-                'base_unit' => $ingredient->base_unit,
-                'system_stock' => (float) $ingredient->stock_quantity,
-                'expected_stock' => $expected['expected_stock'],
-                'discrepancy' => $discrepancy,
+                'ingredient_id'       => $ingredient->id,
+                'ingredient_name'     => $ingredient->name,
+                'base_unit'           => $ingredient->base_unit,
+                'system_stock'        => $currentStock,
+                'expected_stock'      => $expectedStock,
+                'discrepancy'         => $discrepancy,
                 'discrepancy_percent' => $discrepancyPercent,
-                'is_anomaly' => $discrepancyPercent > 5,
+                'is_anomaly'          => $discrepancyPercent > 5,
             ];
         }
 

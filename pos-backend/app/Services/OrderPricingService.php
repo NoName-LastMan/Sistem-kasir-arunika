@@ -10,17 +10,24 @@ class OrderPricingService
 {
     /**
      * Hitung pricing breakdown untuk satu baris item.
+     * Mendukung preloaded collection untuk mencegah N+1 query saat checkout banyak item.
      */
-    public function calculateLineItem(array $item): array
-    {
-        $product = Product::findOrFail($item['product_id']);
+    public function calculateLineItem(
+        array $item,
+        ?\Illuminate\Support\Collection $preloadedProducts = null,
+        ?\Illuminate\Support\Collection $preloadedModifiers = null
+    ): array {
+        $product = $preloadedProducts?->get($item['product_id']) ?? Product::findOrFail($item['product_id']);
 
         $itemTotalPrice = round((float) $product->price, 2);
         $modifiersData  = [];
 
         if (! empty($item['modifiers'])) {
             foreach ($item['modifiers'] as $mod) {
-                $modifierItem = ModifierItem::findOrFail($mod['id']);
+                $modId = $mod['id'] ?? null;
+                $modifierItem = $modId ? ($preloadedModifiers?->get($modId) ?? ModifierItem::findOrFail($modId)) : null;
+                if (! $modifierItem) continue;
+
                 $modPrice     = round((float) $modifierItem->price, 2);
                 $itemTotalPrice = round($itemTotalPrice + $modPrice, 2);
 
@@ -100,8 +107,29 @@ class OrderPricingService
         $subtotal  = 0.0;
         $lineItems = [];
 
+        // Batch pre-load semua produk dan modifier sekaligus (mengurangi puluhan query menjadi hanya 2 query)
+        $productIds = array_unique(array_filter(array_column($items, 'product_id')));
+        $preloadedProducts = ! empty($productIds)
+            ? Product::whereIn('id', $productIds)->get()->keyBy('id')
+            : collect();
+
+        $modifierIds = [];
         foreach ($items as $item) {
-            $line     = $this->calculateLineItem($item);
+            if (! empty($item['modifiers'])) {
+                foreach ($item['modifiers'] as $mod) {
+                    if (! empty($mod['id'])) {
+                        $modifierIds[] = $mod['id'];
+                    }
+                }
+            }
+        }
+        $modifierIds = array_unique($modifierIds);
+        $preloadedModifiers = ! empty($modifierIds)
+            ? ModifierItem::whereIn('id', $modifierIds)->get()->keyBy('id')
+            : collect();
+
+        foreach ($items as $item) {
+            $line     = $this->calculateLineItem($item, $preloadedProducts, $preloadedModifiers);
             $subtotal = round($subtotal + $line['subtotal'], 2);
             $lineItems[] = $line;
         }

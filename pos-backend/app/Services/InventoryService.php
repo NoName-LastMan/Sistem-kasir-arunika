@@ -186,59 +186,75 @@ class InventoryService
 
     /**
      * Potong stok bahan baku saat order berdasarkan resep produk.
+     * Menggunakan eager loading dan konsolidasi bahan untuk memangkas N+1 query.
      */
     public function deductIngredientsForOrder(
         Order $order,
         ?int  $userId,
     ): array {
-        $mutations = [];
+        $order->loadMissing('items.product.ingredients');
+
+        // Konsolidasikan total kebutuhan per bahan baku untuk mencegah multiple lock/update
+        $ingredientNeeds = []; // ingredient_id => ['model' => Ingredient, 'total' => float]
 
         foreach ($order->items as $item) {
             $product = $item->product;
-
             if (! $product) {
                 continue;
             }
 
-            $ingredients = $product->ingredients;
-
-            foreach ($ingredients as $ingredient) {
-                $quantityNeeded = (float) $ingredient->pivot->quantity_needed;
-                $conversionFactor = (float) $ingredient->pivot->conversion_factor;
-                $totalNeeded = $quantityNeeded * $conversionFactor * $item->quantity;
-
+            foreach ($product->ingredients as $ingredient) {
                 if (! $ingredient->track_stock) {
                     continue;
                 }
 
-                $lockedIngredient = Ingredient::where('id', $ingredient->id)->lockForUpdate()->first() ?? $ingredient;
-                $stockBefore = (float) $lockedIngredient->stock_quantity;
+                $quantityNeeded   = (float) $ingredient->pivot->quantity_needed;
+                $conversionFactor = (float) $ingredient->pivot->conversion_factor;
+                $totalNeeded      = $quantityNeeded * $conversionFactor * $item->quantity;
 
-                if ($stockBefore < $totalNeeded) {
-                    throw ValidationException::withMessages([
-                        'items' => [
-                            "Stok bahan {$lockedIngredient->name} tidak mencukupi (Sisa: {$stockBefore} {$lockedIngredient->base_unit})",
-                        ],
-                    ]);
+                if (! isset($ingredientNeeds[$ingredient->id])) {
+                    $ingredientNeeds[$ingredient->id] = [
+                        'model' => $ingredient,
+                        'total' => 0.0,
+                    ];
                 }
+                $ingredientNeeds[$ingredient->id]['total'] += $totalNeeded;
+            }
+        }
 
-                $stockAfter = round($stockBefore - $totalNeeded, 3);
+        $mutations = [];
 
-                $lockedIngredient->update(['stock_quantity' => $stockAfter]);
-                $ingredient->forceFill(['stock_quantity' => $stockAfter])->syncOriginal();
+        foreach ($ingredientNeeds as $ingId => $data) {
+            $totalNeeded = $data['total'];
+            $ingredient  = $data['model'];
 
-                $mutations[] = StockMutation::create([
-                    'ingredient_id'  => $lockedIngredient->id,
-                    'user_id'        => $userId,
-                    'type'           => StockMutation::TYPE_OUT,
-                    'quantity'       => -$totalNeeded,
-                    'stock_before'   => $stockBefore,
-                    'stock_after'    => $stockAfter,
-                    'reference_type' => 'order',
-                    'reference_id'   => $order->id,
-                    'reference_note' => "Penjualan via Order #{$order->invoice_number}",
+            $lockedIngredient = Ingredient::where('id', $ingId)->lockForUpdate()->first() ?? $ingredient;
+            $stockBefore = (float) $lockedIngredient->stock_quantity;
+
+            if ($stockBefore < $totalNeeded) {
+                throw ValidationException::withMessages([
+                    'items' => [
+                        "Stok bahan {$lockedIngredient->name} tidak mencukupi (Sisa: {$stockBefore} {$lockedIngredient->base_unit})",
+                    ],
                 ]);
             }
+
+            $stockAfter = round($stockBefore - $totalNeeded, 3);
+
+            $lockedIngredient->update(['stock_quantity' => $stockAfter]);
+            $ingredient->forceFill(['stock_quantity' => $stockAfter])->syncOriginal();
+
+            $mutations[] = StockMutation::create([
+                'ingredient_id'  => $lockedIngredient->id,
+                'user_id'        => $userId,
+                'type'           => StockMutation::TYPE_OUT,
+                'quantity'       => -$totalNeeded,
+                'stock_before'   => $stockBefore,
+                'stock_after'    => $stockAfter,
+                'reference_type' => 'order',
+                'reference_id'   => $order->id,
+                'reference_note' => "Penjualan via Order #{$order->invoice_number}",
+            ]);
         }
 
         return $mutations;
@@ -249,45 +265,59 @@ class InventoryService
      */
     public function restoreIngredientsForVoid(Order $order, ?int $userId): array
     {
-        $mutations = [];
+        $order->loadMissing('items.product.ingredients');
+
+        $ingredientRestores = [];
 
         foreach ($order->items as $item) {
             $product = $item->product;
-
             if (! $product) {
                 continue;
             }
 
-            $ingredients = $product->ingredients;
-
-            foreach ($ingredients as $ingredient) {
+            foreach ($product->ingredients as $ingredient) {
                 if (! $ingredient->track_stock) {
                     continue;
                 }
 
-                $quantityNeeded = (float) $ingredient->pivot->quantity_needed;
+                $quantityNeeded   = (float) $ingredient->pivot->quantity_needed;
                 $conversionFactor = (float) $ingredient->pivot->conversion_factor;
-                $totalToRestore = $quantityNeeded * $conversionFactor * $item->quantity;
+                $totalToRestore   = $quantityNeeded * $conversionFactor * $item->quantity;
 
-                $lockedIngredient = Ingredient::where('id', $ingredient->id)->lockForUpdate()->first() ?? $ingredient;
-                $stockBefore = (float) $lockedIngredient->stock_quantity;
-                $stockAfter = round($stockBefore + $totalToRestore, 3);
-
-                $lockedIngredient->update(['stock_quantity' => $stockAfter]);
-                $ingredient->forceFill(['stock_quantity' => $stockAfter])->syncOriginal();
-
-                $mutations[] = StockMutation::create([
-                    'ingredient_id'  => $lockedIngredient->id,
-                    'user_id'        => $userId,
-                    'type'           => StockMutation::TYPE_IN,
-                    'quantity'       => $totalToRestore,
-                    'stock_before'   => $stockBefore,
-                    'stock_after'    => $stockAfter,
-                    'reference_type' => 'order',
-                    'reference_id'   => $order->id,
-                    'reference_note' => "Pengembalian bahan via Void Order #{$order->invoice_number}",
-                ]);
+                if (! isset($ingredientRestores[$ingredient->id])) {
+                    $ingredientRestores[$ingredient->id] = [
+                        'model' => $ingredient,
+                        'total' => 0.0,
+                    ];
+                }
+                $ingredientRestores[$ingredient->id]['total'] += $totalToRestore;
             }
+        }
+
+        $mutations = [];
+
+        foreach ($ingredientRestores as $ingId => $data) {
+            $totalToRestore = $data['total'];
+            $ingredient     = $data['model'];
+
+            $lockedIngredient = Ingredient::where('id', $ingId)->lockForUpdate()->first() ?? $ingredient;
+            $stockBefore = (float) $lockedIngredient->stock_quantity;
+            $stockAfter  = round($stockBefore + $totalToRestore, 3);
+
+            $lockedIngredient->update(['stock_quantity' => $stockAfter]);
+            $ingredient->forceFill(['stock_quantity' => $stockAfter])->syncOriginal();
+
+            $mutations[] = StockMutation::create([
+                'ingredient_id'  => $lockedIngredient->id,
+                'user_id'        => $userId,
+                'type'           => StockMutation::TYPE_IN,
+                'quantity'       => $totalToRestore,
+                'stock_before'   => $stockBefore,
+                'stock_after'    => $stockAfter,
+                'reference_type' => 'order',
+                'reference_id'   => $order->id,
+                'reference_note' => "Pengembalian bahan via Void Order #{$order->invoice_number}",
+            ]);
         }
 
         return $mutations;

@@ -60,6 +60,7 @@ class OrderController extends Controller
             }
             @ini_set('zlib.output_compression', '0');
             @ini_set('implicit_flush', '1');
+            @session_write_close();
 
             while (ob_get_level()) {
                 ob_end_flush();

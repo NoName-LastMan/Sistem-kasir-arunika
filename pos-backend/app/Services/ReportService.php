@@ -4,30 +4,30 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use Illuminate\Support\Facades\DB;
 
 class ReportService
 {
     /**
      * Hitung laba kotor (gross profit) dari HPP untuk periode tertentu.
+     * Menggunakan direct SQL aggregation untuk memangkas ribuan model Eloquent dari RAM.
      */
     public function calculateProfitLoss(string $startDate, string $endDate): array
     {
-        $items = OrderItem::whereHas('order', function ($q) use ($startDate, $endDate) {
-                $q->where('status', 'completed')
-                  ->whereDate('created_at', '>=', $startDate)
-                  ->whereDate('created_at', '<=', $endDate);
-            })
-            ->with('product:id,name,price,cost_price')
-            ->get();
+        $aggregated = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
+            ->where('orders.status', 'completed')
+            ->whereDate('orders.created_at', '>=', $startDate)
+            ->whereDate('orders.created_at', '<=', $endDate)
+            ->selectRaw('
+                COALESCE(SUM(order_items.subtotal), 0) as total_revenue,
+                COALESCE(SUM(order_items.quantity * COALESCE(products.cost_price, 0)), 0) as total_cogs
+            ')
+            ->first();
 
-        $totalRevenue = 0.0;
-        $totalCogs    = 0.0;
-
-        foreach ($items as $item) {
-            $totalRevenue = round($totalRevenue + (float) $item->subtotal, 2);
-            $costPrice    = (float) ($item->product->cost_price ?? 0);
-            $totalCogs    = round($totalCogs + ($costPrice * $item->quantity), 2);
-        }
+        $totalRevenue = round((float) ($aggregated->total_revenue ?? 0), 2);
+        $totalCogs    = round((float) ($aggregated->total_cogs ?? 0), 2);
 
         $totalDiscounts = (float) Order::where('status', 'completed')
             ->whereDate('created_at', '>=', $startDate)
@@ -41,7 +41,7 @@ class ReportService
 
         return [
             'total_revenue'         => $totalRevenue,
-            'total_discounts'       => $totalDiscounts,
+            'total_discounts'       => round($totalDiscounts, 2),
             'cost_of_goods_sold'    => $totalCogs,
             'gross_profit'          => $grossProfit,
             'profit_margin_percent' => $profitMarginPct,
@@ -50,6 +50,7 @@ class ReportService
 
     /**
      * Hitung ringkasan penjualan (KPI, breakdown metode bayar & tipe order).
+     * Seluruh kalkulasi diselesaikan di level SQL dalam 1 kali query, hemat RAM & CPU.
      */
     public function calculateSalesSummary(
         string  $startDate,
@@ -57,45 +58,58 @@ class ReportService
         ?int    $userId = null,
         ?string $paymentMethod = null,
     ): array {
-        $query = Order::where('status', 'completed')
+        $baseQuery = Order::where('status', 'completed')
             ->whereDate('created_at', '>=', $startDate)
             ->whereDate('created_at', '<=', $endDate);
 
         if ($userId) {
-            $query->where('user_id', $userId);
+            $baseQuery->where('user_id', $userId);
         }
 
         if ($paymentMethod) {
-            $query->where('payment_method', $paymentMethod);
+            $baseQuery->where('payment_method', $paymentMethod);
         }
 
-        $orders = $query->get();
+        $summary = $baseQuery->selectRaw("
+            COUNT(id) as total_orders,
+            COALESCE(SUM(subtotal), 0) as gross_sales,
+            COALESCE(SUM(discount_amount), 0) as total_discount,
+            COALESCE(SUM(tax_amount), 0) as total_tax,
+            COALESCE(SUM(total_amount), 0) as net_sales,
+            COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN total_amount ELSE 0 END), 0) as pay_cash,
+            COALESCE(SUM(CASE WHEN payment_method = 'qris' THEN total_amount ELSE 0 END), 0) as pay_qris,
+            COALESCE(SUM(CASE WHEN payment_method = 'card' THEN total_amount ELSE 0 END), 0) as pay_card,
+            COALESCE(SUM(CASE WHEN payment_method = 'transfer' THEN total_amount ELSE 0 END), 0) as pay_transfer,
+            COALESCE(SUM(CASE WHEN order_type = 'dine_in' THEN 1 ELSE 0 END), 0) as type_dine_in,
+            COALESCE(SUM(CASE WHEN order_type = 'takeaway' THEN 1 ELSE 0 END), 0) as type_takeaway,
+            COALESCE(SUM(CASE WHEN order_type = 'delivery' THEN 1 ELSE 0 END), 0) as type_delivery
+        ")->first();
 
-        $totalOrders = $orders->count();
-        $totalNet    = (float) $orders->sum('total_amount');
+        $totalOrders = (int) ($summary->total_orders ?? 0);
+        $totalNet    = (float) ($summary->net_sales ?? 0);
         $avgOrderValue = $totalOrders > 0
             ? round($totalNet / $totalOrders, 2)
             : 0.0;
 
         return [
             'kpi' => [
-                'gross_sales'         => round((float) $orders->sum('subtotal'), 2),
-                'total_discount'      => round((float) $orders->sum('discount_amount'), 2),
-                'total_tax'           => round((float) $orders->sum('tax_amount'), 2),
+                'gross_sales'         => round((float) ($summary->gross_sales ?? 0), 2),
+                'total_discount'      => round((float) ($summary->total_discount ?? 0), 2),
+                'total_tax'           => round((float) ($summary->total_tax ?? 0), 2),
                 'net_sales'           => round($totalNet, 2),
                 'total_orders'        => $totalOrders,
                 'average_order_value' => $avgOrderValue,
             ],
             'by_payment_method' => [
-                'cash'     => round((float) $orders->where('payment_method', 'cash')->sum('total_amount'), 2),
-                'qris'     => round((float) $orders->where('payment_method', 'qris')->sum('total_amount'), 2),
-                'card'     => round((float) $orders->where('payment_method', 'card')->sum('total_amount'), 2),
-                'transfer' => round((float) $orders->where('payment_method', 'transfer')->sum('total_amount'), 2),
+                'cash'     => round((float) ($summary->pay_cash ?? 0), 2),
+                'qris'     => round((float) ($summary->pay_qris ?? 0), 2),
+                'card'     => round((float) ($summary->pay_card ?? 0), 2),
+                'transfer' => round((float) ($summary->pay_transfer ?? 0), 2),
             ],
             'by_order_type' => [
-                'dine_in'  => $orders->where('order_type', 'dine_in')->count(),
-                'takeaway' => $orders->where('order_type', 'takeaway')->count(),
-                'delivery' => $orders->where('order_type', 'delivery')->count(),
+                'dine_in'  => (int) ($summary->type_dine_in ?? 0),
+                'takeaway' => (int) ($summary->type_takeaway ?? 0),
+                'delivery' => (int) ($summary->type_delivery ?? 0),
             ],
         ];
     }
