@@ -28,6 +28,81 @@ class OrderController extends Controller
     }
 
     /**
+     * Beritahu perubahan status/pesanan secara real-time via Cache timestamp
+     */
+    private function notifyOrderChange(): void
+    {
+        cache()->forever('orders_last_updated_at', microtime(true));
+    }
+
+    /**
+     * Server-Sent Events (SSE) Stream untuk pembaruan pesanan kasir & dapur secara real-time
+     */
+    public function stream(Request $request)
+    {
+        $token = $request->query('token') ?: $request->bearerToken();
+        if (!$token) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+        if (!$accessToken || !$accessToken->tokenable) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        return response()->stream(function () use ($request) {
+            $lastChecked = (float) $request->input('last_time', microtime(true) - 0.5);
+            $startTime = time();
+            $maxDuration = 20;
+
+            if (function_exists('apache_setenv')) {
+                apache_setenv('no-gzip', '1');
+            }
+            @ini_set('zlib.output_compression', '0');
+            @ini_set('implicit_flush', '1');
+
+            while (ob_get_level()) {
+                ob_end_flush();
+            }
+
+            echo "retry: 2500\n\n";
+            echo "event: connected\ndata: " . json_encode(['status' => 'connected', 'timestamp' => microtime(true)]) . "\n\n";
+            flush();
+
+            while ((time() - $startTime) < $maxDuration) {
+                if (connection_aborted()) {
+                    break;
+                }
+
+                $lastUpdated = (float) cache()->get('orders_last_updated_at', 0);
+                if ($lastUpdated > $lastChecked) {
+                    $lastChecked = $lastUpdated;
+                    $pendingCount = Order::where('status', 'pending')
+                        ->whereDate('created_at', now()->toDateString())
+                        ->count();
+
+                    $payload = [
+                        'timestamp'     => $lastUpdated,
+                        'pending_count' => $pendingCount,
+                    ];
+                    echo "event: order_update\ndata: " . json_encode($payload) . "\n\n";
+                    flush();
+                }
+
+                usleep(1000000); // 1 detik
+            }
+
+            echo "event: heartbeat\ndata: " . json_encode(['timestamp' => microtime(true)]) . "\n\n";
+            flush();
+        }, 200, [
+            'Content-Type'      => 'text/event-stream',
+            'Cache-Control'     => 'no-cache, no-transform',
+            'Connection'        => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
+    /**
      * Menampilkan daftar transaksi/order terakhir.
      */
     public function index(Request $request)
@@ -173,6 +248,8 @@ class OrderController extends Controller
                 userId: $request->user()->id,
             );
 
+            $this->notifyOrderChange();
+
             return response()->json([
                 'message' => 'Transaksi berhasil diproses',
                 'data'    => $order->load(['user:id,name', 'table:id,table_number', 'items.product', 'items.modifiers.modifierItem'])
@@ -237,6 +314,8 @@ class OrderController extends Controller
                     \App\Models\Table::where('id', $order->table_id)->update(['status' => 'available']);
                 }
             }
+
+            $this->notifyOrderChange();
 
             return response()->json([
                 'message' => 'Order berhasil dibatalkan dan status meja/stok telah disesuaikan.',
@@ -325,6 +404,8 @@ class OrderController extends Controller
                 \App\Models\Table::where('id', $order->table_id)->update(['status' => 'occupied']);
             }
 
+            $this->notifyOrderChange();
+
             return response()->json([
                 'message' => 'Pesanan berhasil dikonfirmasi dan diteruskan ke dapur',
                 'data'    => $order->load(['user:id,name', 'table:id,table_number', 'items.product', 'items.modifiers.modifierItem'])
@@ -368,6 +449,8 @@ class OrderController extends Controller
                 \App\Models\Table::where('id', $order->table_id)->update(['status' => 'available']);
             }
         }
+
+        $this->notifyOrderChange();
 
         return response()->json([
             'message' => 'Pesanan selesai dimasak dan siap disajikan',
@@ -466,6 +549,8 @@ class OrderController extends Controller
                     $orderItem->modifiers()->createMany($line['modifiers']);
                 }
             }
+
+            $this->notifyOrderChange();
 
             return response()->json([
                 'message' => 'Pesanan berhasil dibuat, silakan konfirmasi pembayaran ke kasir.',

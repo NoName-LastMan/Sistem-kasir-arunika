@@ -65,6 +65,9 @@ Route::get('/public/tables/{code}', [AdminTableController::class, 'publicValidat
 Route::post('/public/orders', [OrderController::class, 'publicCreateOrder'])->middleware('throttle:30,1');
 Route::get('/public/orders/{id}/status', [OrderController::class, 'publicOrderStatus']);
 
+// SSE real-time stream (otentikasi mandiri via query token atau bearer header untuk kompatibilitas browser EventSource)
+Route::get('/orders/stream', [OrderController::class, 'stream']);
+
 // Protected routes (Kasir, Koki, Admin, Owner)
 Route::middleware('auth:sanctum')->group(function () {
     // Auth & Profil

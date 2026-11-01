@@ -125,7 +125,7 @@ class ProductController extends Controller
     }
 
     /**
-     * Upload foto produk dari perangkat kasir / admin
+     * Upload foto produk dari perangkat kasir / admin dengan kompresi WebP otomatis
      */
     public function uploadImage(Request $request)
     {
@@ -142,13 +142,13 @@ class ProductController extends Controller
         // 1. Jika via multipart file
         if ($request->hasFile('image')) {
             $file = $request->file('image');
-            $filename = 'menu_' . time() . '_' . \Illuminate\Support\Str::random(8) . '.' . $file->getClientOriginalExtension();
-            $file->move($destinationPath, $filename);
+            $data = file_get_contents($file->getRealPath());
+            $filename = $this->saveOptimizedWebp($data, $destinationPath, $file->getClientOriginalExtension());
             $url = url('uploads/products/' . $filename);
 
             return response()->json([
-                'message' => 'Foto produk berhasil diunggah',
-                'url'     => $url,
+                'message'  => 'Foto produk berhasil dioptimasi & diunggah',
+                'url'      => $url,
                 'filename' => $filename
             ]);
         }
@@ -158,26 +158,78 @@ class ProductController extends Controller
             $base64Data = $request->input('image_base64');
             if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
                 $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
-                $type = strtolower($type[1]);
-                if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                $ext = strtolower($type[1]);
+                if (!in_array($ext, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
                     return response()->json(['message' => 'Format gambar tidak didukung'], 422);
                 }
                 $decoded = base64_decode($base64Data);
                 if ($decoded === false) {
                     return response()->json(['message' => 'Gagal membaca data gambar'], 422);
                 }
-                $filename = 'menu_' . time() . '_' . \Illuminate\Support\Str::random(8) . '.' . $type;
-                file_put_contents($destinationPath . '/' . $filename, $decoded);
+
+                $filename = $this->saveOptimizedWebp($decoded, $destinationPath, $ext);
                 $url = url('uploads/products/' . $filename);
 
                 return response()->json([
-                    'message' => 'Foto produk berhasil diunggah',
-                    'url'     => $url,
+                    'message'  => 'Foto produk berhasil dioptimasi & diunggah',
+                    'url'      => $url,
                     'filename' => $filename
                 ]);
             }
         }
 
         return response()->json(['message' => 'File atau data gambar tidak ditemukan.'], 400);
+    }
+
+    /**
+     * Kompres dan konversi gambar ke WebP teroptimasi (maks 800x800, quality 82)
+     */
+    private function saveOptimizedWebp(string $rawData, string $destinationPath, ?string $originalExt = null): string
+    {
+        $randomName = 'menu_' . time() . '_' . \Illuminate\Support\Str::random(8);
+
+        if (function_exists('imagewebp') && function_exists('imagecreatefromstring')) {
+            $src = @imagecreatefromstring($rawData);
+            if ($src !== false) {
+                $width = imagesx($src);
+                $height = imagesy($src);
+                $maxDimension = 800;
+
+                if ($width > $maxDimension || $height > $maxDimension) {
+                    if ($width >= $height) {
+                        $newWidth = $maxDimension;
+                        $newHeight = (int) round(($height / $width) * $maxDimension);
+                    } else {
+                        $newHeight = $maxDimension;
+                        $newWidth = (int) round(($width / $height) * $maxDimension);
+                    }
+
+                    $scaled = imagescale($src, $newWidth, $newHeight, IMG_BILINEAR_FIXED);
+                    if ($scaled !== false) {
+                        imagedestroy($src);
+                        $src = $scaled;
+                    }
+                }
+
+                imagepalettetotruecolor($src);
+                imagealphablending($src, true);
+                imagesavealpha($src, true);
+
+                $webpFilename = $randomName . '.webp';
+                $targetFile = $destinationPath . '/' . $webpFilename;
+
+                if (imagewebp($src, $targetFile, 82)) {
+                    imagedestroy($src);
+                    return $webpFilename;
+                }
+                imagedestroy($src);
+            }
+        }
+
+        // Fallback simpan berkas asli jika GD tidak dapat memproses
+        $ext = $originalExt ? strtolower($originalExt) : 'jpg';
+        $fallbackFilename = $randomName . '.' . $ext;
+        file_put_contents($destinationPath . '/' . $fallbackFilename, $rawData);
+        return $fallbackFilename;
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../api/client'
 import { useAuthStore } from '../../stores/authStore'
@@ -7,6 +7,7 @@ import { useShiftStore } from '../../stores/shiftStore'
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useChime } from '../../hooks/useChime'
+import { useOrderStream } from '../../hooks/useOrderStream'
 import { PaymentModal } from '../../components/pos/PaymentModal'
 import { ReceiptModal } from '../../components/pos/ReceiptModal'
 import { HeldOrdersModal } from '../../components/pos/HeldOrdersModal'
@@ -70,11 +71,12 @@ export function POSPage() {
     fetchProducts()
     checkPendingGuestOrders()
 
+    // Fallback polling santai jika SSE reconnect/terputus
     const interval = setInterval(() => {
       if (!document.hidden) {
         checkPendingGuestOrders()
       }
-    }, 10000)
+    }, 30000)
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -88,6 +90,22 @@ export function POSPage() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
+
+  // Real-time SSE listener: Pesanan tamu / perubahan order langsung diterima instan tanpa nunggu polling
+  useOrderStream(
+    useCallback((data) => {
+      if (typeof data?.pending_count === 'number') {
+        setPendingGuestCount(prev => {
+          if (data.pending_count > prev && prev > 0) {
+            playSuccessChime()
+          }
+          return data.pending_count
+        })
+      } else {
+        checkPendingGuestOrders()
+      }
+    }, [playSuccessChime])
+  )
 
   const checkPendingGuestOrders = async () => {
     if (document.hidden) return

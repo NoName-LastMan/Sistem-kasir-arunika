@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api/client'
 import { useAuthStore } from '../../stores/authStore'
 import { useChime } from '../../hooks/useChime'
+import { useOrderStream } from '../../hooks/useOrderStream'
 import { 
   Utensils, Clock, CheckCircle2, Volume2, VolumeX, Maximize2, 
   ArrowLeft, RefreshCw, ChefHat, AlertTriangle
@@ -46,7 +47,7 @@ export function KitchenDisplayPage() {
     }
   }
 
-  // Smart Polling with Tab Visibility Guard (stops polling when tab is inactive)
+  // Fallback Polling dengan Tab Visibility Guard (frekuensi santai karena ada push SSE)
   useEffect(() => {
     fetchKitchenOrders()
 
@@ -54,7 +55,7 @@ export function KitchenDisplayPage() {
       if (!document.hidden) {
         fetchKitchenOrders()
       }
-    }, 8000)
+    }, 30000)
 
     const handleVisibility = () => {
       if (!document.hidden) {
@@ -68,6 +69,13 @@ export function KitchenDisplayPage() {
       document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [soundEnabled])
+
+  // Real-time SSE: Memperbarui tampilan dapur secara instan begitu ada pesanan baru/konfirmasi kasir
+  useOrderStream(
+    useCallback(() => {
+      fetchKitchenOrders()
+    }, [])
+  )
 
   const handleMarkReady = async (orderId) => {
     playSuccessChime()
