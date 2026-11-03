@@ -138,31 +138,41 @@ export const usePosStore = create((set, get) => ({
   },
 
   processCheckout: async (paymentData) => {
-    const { cart, orderType, selectedTable, discountType, discountValue, taxRate } = get()
-    if (cart.length === 0) throw new Error('Keranjang belanja kosong')
+    try {
+      const { cart, orderType, selectedTable, discountType, discountValue, taxRate } = get()
+      if (cart.length === 0) throw new Error('Keranjang belanja kosong')
 
-    const items = cart.map(item => ({
-      product_id: item.product.id,
-      quantity: item.quantity,
-      notes: item.notes || null,
-      modifiers: (item.modifiers || []).map(m => ({ id: m.id }))
-    }))
+      const items = cart.map(item => ({
+        product_id: item.product.id,
+        quantity: item.quantity,
+        notes: item.notes || null,
+        modifiers: (item.modifiers || []).map(m => ({ id: m.id }))
+      }))
 
-    const payload = {
-      order_type: orderType,
-      table_id: selectedTable?.id || null,
-      payment_method: paymentData.paymentMethod, // 'cash', 'qris', 'card', 'transfer'
-      cash_tendered: paymentData.cashTendered ? Number(paymentData.cashTendered) : null,
-      discount_type: discountType,
-      discount_value: discountValue,
-      tax_rate: taxRate,
-      items
+      const paymentMethod = paymentData.payment_method || paymentData.paymentMethod || 'cash'
+      const cashTendered = paymentData.cash_tendered !== undefined ? paymentData.cash_tendered : paymentData.cashTendered
+
+      const payload = {
+        order_type: orderType,
+        table_id: selectedTable?.id || null,
+        payment_method: paymentMethod, // 'cash', 'qris', 'card', 'transfer'
+        cash_tendered: cashTendered ? Number(cashTendered) : null,
+        discount_type: discountType,
+        discount_value: discountValue,
+        tax_rate: taxRate,
+        items
+      }
+
+      const res = await api.post('/orders', payload)
+      const orderData = res.data?.data || res.data || res.order || res
+      set({ lastCompletedOrder: orderData })
+      get().clearCart()
+      return { success: true, order: orderData }
+    } catch (err) {
+      return {
+        success: false,
+        error: err?.response?.data?.message || err?.message || 'Gagal memproses transaksi.'
+      }
     }
-
-    const res = await api.post('/orders', payload)
-    const orderData = res.data || res
-    set({ lastCompletedOrder: orderData })
-    get().clearCart()
-    return orderData
   }
 }))

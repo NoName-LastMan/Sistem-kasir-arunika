@@ -15,10 +15,13 @@ import { TablePickerModal } from '../../components/pos/TablePickerModal'
 import { ShiftModal } from '../../components/shifts/ShiftModal'
 import { GuestOrdersModal } from '../../components/pos/GuestOrdersModal'
 import { QuickAddProductModal } from '../../components/pos/QuickAddProductModal'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cartItemVariant, toastVariant, badgePop, springSnappy } from '../../lib/motion'
 import { 
-  Search, ShoppingCart, Coffee, Trash2, Plus, Minus, Bookmark, 
+  Search, ShoppingCart, Coffee, Trash2, Plus, Minus, Bookmark, Menu, X, 
   CreditCard, LayoutGrid, Clock, LogOut, Utensils, History,
-  FileText, Shield, AlertCircle, Check, Bell
+  FileText, Shield, AlertCircle, Check, Bell,
+  ArrowLeft, ArrowRight
 } from 'lucide-react'
 
 export function POSPage() {
@@ -51,6 +54,8 @@ export function POSPage() {
   const [successToast, setSuccessToast] = useState(null)
   const [pendingGuestCount, setPendingGuestCount] = useState(0)
   const [completedOrder, setCompletedOrder] = useState(null)
+  const [mobileTab, setMobileTab] = useState('catalog') // 'catalog' | 'cart'
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const searchInputRef = useRef(null)
 
@@ -157,9 +162,7 @@ export function POSPage() {
     onTable: () => setShowTableModal(true),
     onHold: () => handleHoldCurrentOrder(),
     onHeldOrders: () => setShowHeldModal(true),
-    onPay: () => {
-      if (cart.length > 0) setShowPayModal(true)
-    },
+    onPay: () => handleOpenPayment(),
     onEscape: () => {
       setShowPayModal(false)
       setShowReceiptModal(false)
@@ -169,6 +172,17 @@ export function POSPage() {
       setShowQuickAddModal(false)
     }
   })
+
+  const handleOpenPayment = () => {
+    if (cart.length === 0) return
+    if (!currentShift) {
+      playAlertBeep()
+      alert('Perhatian: Harap buka shift kasir terlebih dahulu dan masukkan modal awal laci kas sebelum memproses transaksi.')
+      setShowShiftModal(true)
+      return
+    }
+    setShowPayModal(true)
+  }
 
   const handleHoldCurrentOrder = async () => {
     if (cart.length === 0) return
@@ -187,6 +201,7 @@ export function POSPage() {
     setShowPayModal(false)
     setCompletedOrder(order)
     setShowReceiptModal(true)
+    setMobileTab('catalog')
   }
 
   // Filtered products by search & category (Memoized to prevent render lag)
@@ -210,41 +225,41 @@ export function POSPage() {
     <div className="flex flex-col h-screen bg-paper-50 select-none overflow-hidden">
       
       {/* Top Navigation Bar */}
-      <header className="h-16 bg-forest-900 text-white px-5 flex items-center justify-between shadow-warm-md shrink-0">
+      <header className="h-16 bg-forest-900 text-white px-3 sm:px-5 flex items-center justify-between shadow-warm-md shrink-0 relative z-30">
         
         {/* Brand & Shift status */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-forest-800 border border-white/10 flex items-center justify-center">
-              <Coffee className="w-5 h-5 text-mint-200" />
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-forest-800 border border-white/10 flex items-center justify-center shrink-0">
+              <Coffee className="w-4 h-4 sm:w-5 sm:h-5 text-mint-200" />
             </div>
             <div>
-              <h1 className="font-serif font-bold text-base leading-tight tracking-wide">
-                Kasir Arunika POS
+              <h1 className="font-serif font-bold text-sm sm:text-base leading-tight tracking-wide">
+                Kasir Arunika
               </h1>
-              <span className="text-[10px] text-pine-300 font-mono block">Terminal Kasir F&B</span>
+              <span className="text-[9px] sm:text-[10px] text-pine-300 font-mono hidden sm:block">Terminal Kasir F&B</span>
             </div>
           </div>
 
-          <div className="h-6 w-px bg-white/15" />
+          <div className="hidden sm:block h-6 w-px bg-white/15" />
 
-          {/* Shift Status Button */}
+          {/* Shift Status Button (Desktop) */}
           <button
             onClick={() => setShowShiftModal(true)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
+            className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
               currentShift 
                 ? 'bg-emerald-950/60 text-emerald-200 border-emerald-500/40 hover:bg-emerald-900/60' 
                 : 'bg-red-950/60 text-red-200 border-red-500/40 hover:bg-red-900/60'
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>{currentShift ? 'Shift Aktif' : 'Buka Shift (Perlu)'}</span>
+            <span>{currentShift ? 'Shift Aktif' : 'Buka Shift'}</span>
           </button>
 
           {/* Guest Orders Pending Button */}
           <button
             onClick={() => setShowGuestModal(true)}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
               pendingGuestCount > 0
                 ? 'bg-amber-400 text-forest-950 border-amber-300 shadow-md animate-bounce'
                 : 'bg-forest-800/80 text-pine-200 border-white/10 hover:bg-forest-700'
@@ -252,86 +267,250 @@ export function POSPage() {
             title="Pesanan dari aplikasi tamu / scan QR yang menunggu konfirmasi kasir"
           >
             <Bell className="w-3.5 h-3.5" />
-            <span>Pesanan Tamu ({pendingGuestCount})</span>
+            <span className="hidden sm:inline">Pesanan Tamu</span>
+            <span className="font-mono">({pendingGuestCount})</span>
           </button>
         </div>
 
-        {/* Shortcuts Hint Pills */}
-        <div className="hidden lg:flex items-center gap-2 text-[11px] font-mono text-pine-300">
+        {/* Shortcuts Hint Pills (Desktop Only) */}
+        <div className="hidden xl:flex items-center gap-2 text-[11px] font-mono text-pine-300">
           <span className="px-2 py-0.5 rounded-lg bg-forest-800 border border-white/10 text-white">F2</span> Cari
           <span className="px-2 py-0.5 rounded-lg bg-forest-800 border border-white/10 text-white">F3</span> Meja
           <span className="px-2 py-0.5 rounded-lg bg-forest-800 border border-white/10 text-white">F4</span> Hold
-          <span className="px-2 py-0.5 rounded-lg bg-forest-800 border border-white/10 text-white">F7</span> Held ({'>'})
+          <span className="px-2 py-0.5 rounded-lg bg-forest-800 border border-white/10 text-white">F7</span> Held (&gt;)
           <span className="px-2 py-0.5 rounded-lg bg-forest-800 border border-white/10 text-white">F8</span> Bayar
         </div>
 
         {/* Navigation & User Profile */}
-        <div className="flex items-center gap-3">
-          <Link
-            to="/orders"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-800/80 hover:bg-forest-700 text-xs font-medium transition"
-          >
-            <History className="w-4 h-4 text-mint-200" />
-            <span>Riwayat Order</span>
-          </Link>
-
-          {hasRole(['kitchen', 'admin', 'superadmin']) && (
+        <div className="flex items-center gap-2 sm:gap-3">
+          
+          {/* Desktop Links */}
+          <div className="hidden lg:flex items-center gap-2">
             <Link
-              to="/kitchen"
+              to="/orders"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-800/80 hover:bg-forest-700 text-xs font-medium transition"
             >
-              <Utensils className="w-4 h-4 text-sun-400" />
-              <span>Dapur (KDS)</span>
+              <History className="w-4 h-4 text-mint-200" />
+              <span>Riwayat Order</span>
             </Link>
-          )}
 
-          {hasRole(['admin', 'superadmin']) && (
-            <Link
-              to="/admin/products"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-800/80 hover:bg-forest-700 text-xs font-medium transition"
-              title="Kelola Master Menu & Produk"
+            {hasRole(['kitchen', 'admin', 'superadmin']) && (
+              <Link
+                to="/kitchen"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-800/80 hover:bg-forest-700 text-xs font-medium transition"
+              >
+                <Utensils className="w-4 h-4 text-sun-400" />
+                <span>Dapur (KDS)</span>
+              </Link>
+            )}
+
+            {hasRole(['admin', 'superadmin']) && (
+              <Link
+                to="/admin/products"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-800/80 hover:bg-forest-700 text-xs font-medium transition"
+                title="Kelola Master Menu & Produk"
+              >
+                <Coffee className="w-4 h-4 text-sun-300" />
+                <span>Master Menu</span>
+              </Link>
+            )}
+
+            {hasRole(['admin', 'superadmin']) && (
+              <Link
+                to="/admin/reports"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sun-400 text-forest-950 hover:bg-sun-400/90 text-xs font-semibold transition"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Backoffice</span>
+              </Link>
+            )}
+
+            <div className="h-6 w-px bg-white/15 mx-1" />
+
+            <div className="text-right">
+              <span className="text-xs font-semibold block leading-tight">{user?.name || 'Kasir'}</span>
+              <span className="text-[10px] text-pine-300 capitalize">{user?.role || 'cashier'}</span>
+            </div>
+
+            <button
+              onClick={logout}
+              className="p-2 rounded-xl text-pine-300 hover:text-white hover:bg-forest-800 transition cursor-pointer"
+              title="Keluar"
             >
-              <Coffee className="w-4 h-4 text-sun-300" />
-              <span>Master Menu</span>
-            </Link>
-          )}
-
-          {hasRole(['admin', 'superadmin']) && (
-            <Link
-              to="/admin/reports"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sun-400 text-forest-950 hover:bg-sun-400/90 text-xs font-semibold transition"
-            >
-              <Shield className="w-4 h-4" />
-              <span>Backoffice</span>
-            </Link>
-          )}
-
-          <div className="h-6 w-px bg-white/15" />
-
-          <div className="text-right">
-            <span className="text-xs font-semibold block leading-tight">{user?.name || 'Kasir'}</span>
-            <span className="text-[10px] text-pine-300 capitalize">{user?.role || 'cashier'}</span>
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
 
-          <button
-            onClick={logout}
-            className="p-2 rounded-xl text-pine-300 hover:text-white hover:bg-forest-800 transition cursor-pointer"
-            title="Keluar"
+          {/* Mobile Cart Button */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            type="button"
+            onClick={() => setMobileTab(mobileTab === 'cart' ? 'catalog' : 'cart')}
+            className={`lg:hidden relative p-2 rounded-xl border transition cursor-pointer ${
+              mobileTab === 'cart'
+                ? 'bg-sun-400 text-forest-950 border-sun-400'
+                : 'bg-forest-800 border-forest-700 text-white'
+            }`}
+            title="Buka / Tutup Keranjang"
           >
-            <LogOut className="w-4 h-4" />
+            <ShoppingCart className="w-4 h-4" />
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-sun-400 text-forest-950 text-[9px] font-bold font-mono">
+                {cart.reduce((a, b) => a + b.quantity, 0)}
+              </span>
+            )}
+          </motion.button>
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(prev => !prev)}
+            className="lg:hidden p-2 rounded-xl text-pine-200 hover:text-white hover:bg-forest-800 border border-forest-700 transition cursor-pointer"
+            aria-label="Menu Navigasi Mobile"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
 
       </header>
 
+      {/* Mobile Navigation Drawer / Dropdown */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="lg:hidden bg-forest-950 border-b border-forest-800 px-4 py-3 text-white space-y-3 z-20 overflow-hidden"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-forest-800">
+              <div>
+                <span className="text-xs font-bold text-white block">{user?.name || 'Kasir'}</span>
+                <span className="text-[10px] text-pine-300 font-mono capitalize">{user?.role || 'cashier'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setShowShiftModal(true)
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
+                  currentShift
+                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                    : 'bg-red-950/80 text-red-300 border-red-500/50'
+                }`}
+              >
+                {currentShift ? 'Kelola Shift Aktif' : 'Buka Shift Baru'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <Link
+                to="/orders"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2.5 rounded-xl bg-forest-900 hover:bg-forest-800 flex items-center gap-2 font-medium"
+              >
+                <History className="w-4 h-4 text-mint-200" />
+                <span>Riwayat Order</span>
+              </Link>
+
+              {hasRole(['kitchen', 'admin', 'superadmin']) && (
+                <Link
+                  to="/kitchen"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2.5 rounded-xl bg-forest-900 hover:bg-forest-800 flex items-center gap-2 font-medium"
+                >
+                  <Utensils className="w-4 h-4 text-sun-400" />
+                  <span>Dapur (KDS)</span>
+                </Link>
+              )}
+
+              {hasRole(['admin', 'superadmin']) && (
+                <Link
+                  to="/admin/products"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2.5 rounded-xl bg-forest-900 hover:bg-forest-800 flex items-center gap-2 font-medium"
+                >
+                  <Coffee className="w-4 h-4 text-sun-300" />
+                  <span>Master Menu</span>
+                </Link>
+              )}
+
+              {hasRole(['admin', 'superadmin']) && (
+                <Link
+                  to="/admin/reports"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2.5 rounded-xl bg-sun-400 text-forest-950 flex items-center gap-2 font-bold"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Backoffice ERP</span>
+                </Link>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-forest-800 flex justify-between items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setShowTableModal(true)
+                }}
+                className="text-xs text-pine-300 hover:text-white flex items-center gap-1.5"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Pilih Meja ({selectedTable ? `Meja ${selectedTable.table_number || selectedTable.number}` : 'Bawa Pulang'})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={logout}
+                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 font-semibold"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Keluar</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Main Content: Split Screen */}
       <div className="flex-1 flex overflow-hidden">
         
         {/* Left Side: Product Catalog (65%) */}
-        <div className="flex-1 flex flex-col border-r border-pine-200 overflow-hidden bg-paper-50/50">
+        <div className={`flex-1 flex-col border-r border-pine-200 overflow-hidden bg-paper-50/50 ${mobileTab === 'cart' ? 'hidden lg:flex' : 'flex'}`}>
           
           {/* Subheader Filters */}
           <div className="p-4 border-b border-pine-200 space-y-3 bg-white">
+            {/* Guest Order Notification Banner */}
+            {pendingGuestCount > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 bg-amber-400 text-forest-950 rounded-2xl flex items-center justify-between shadow-sm border border-amber-300"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-forest-950 text-amber-300 flex items-center justify-center shrink-0">
+                    <Bell className="w-4 h-4 animate-bounce" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold block leading-tight">
+                      Ada {pendingGuestCount} Pesanan Tamu Baru Menunggu Konfirmasi!
+                    </span>
+                    <span className="text-[10px] text-forest-900/80">
+                      Pelanggan memesan mandiri via scan QR / cafe portal.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGuestModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-forest-950 hover:bg-forest-900 text-amber-300 font-bold text-xs shadow-xs transition cursor-pointer shrink-0"
+                >
+                  Terima Pesanan
+                </button>
+              </motion.div>
+            )}
             
             {/* Search & Actions Bar */}
             <div className="flex items-center gap-3">
@@ -358,7 +537,7 @@ export function POSPage() {
                 }`}
               >
                 <LayoutGrid className="w-4 h-4 text-forest-700" />
-                <span>{selectedTable ? `Meja ${selectedTable.number || selectedTable.table_number}` : 'Pilih Meja (F3)'}</span>
+                <span className="hidden sm:inline">{selectedTable ? `Meja ${selectedTable.number || selectedTable.table_number}` : 'Pilih Meja (F3)'}</span><span className="sm:hidden font-mono font-bold">{selectedTable ? `M${selectedTable.number || selectedTable.table_number}` : 'Meja'}</span>
               </button>
 
               {/* Held Orders Drawer Toggle */}
@@ -368,7 +547,7 @@ export function POSPage() {
                 className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-pine-200 bg-white text-ink-700 hover:bg-paper-50 text-xs font-medium transition cursor-pointer"
               >
                 <Bookmark className="w-4 h-4 text-wood-500" />
-                <span>Held (F7)</span>
+                <span className="hidden sm:inline">Held (F7)</span><span className="sm:hidden font-bold">Held</span>
               </button>
 
               {/* Quick Add Product Button */}
@@ -379,7 +558,7 @@ export function POSPage() {
                 title="Tambah menu baru langsung ke kasir"
               >
                 <Plus className="w-4 h-4 text-sun-400" />
-                <span>+ Tambah Menu</span>
+                <span className="hidden sm:inline">+ Tambah Menu</span><span className="sm:hidden font-bold">+ Menu</span>
               </button>
             </div>
 
@@ -415,7 +594,7 @@ export function POSPage() {
           </div>
 
           {/* Product Grid Container */}
-          <div className="flex-1 p-4 overflow-y-auto">
+          <div className="flex-1 p-2.5 sm:p-4 overflow-y-auto">
             {loadingProducts ? (
               <div className="py-24 text-center text-ink-400 text-xs">Memuat katalog menu...</div>
             ) : filteredProducts.length === 0 ? (
@@ -432,11 +611,13 @@ export function POSPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
                 {filteredProducts.map((product) => {
                   const isOutOfStock = product.stock !== null && product.stock <= 0
                   return (
-                    <button
+                    <motion.button
+                      whileHover={isOutOfStock ? {} : { y: -2 }}
+                      whileTap={isOutOfStock ? {} : { scale: 0.98 }}
                       key={product.id}
                       type="button"
                       disabled={isOutOfStock}
@@ -474,23 +655,64 @@ export function POSPage() {
                           <Plus className="w-3.5 h-3.5" />
                         </div>
                       </div>
-                    </button>
+                    </motion.button>
                   )
                 })}
               </div>
             )}
           </div>
 
+          {/* Mobile Bottom Floating Cart Summary Bar */}
+          {cart.length > 0 && (
+            <div className="lg:hidden p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-forest-950 text-white border-t border-forest-900 shadow-2xl flex items-center justify-between z-20 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-forest-800 flex items-center justify-center text-sun-400 font-mono text-xs font-bold">
+                  {cart.reduce((a, b) => a + b.quantity, 0)}
+                </div>
+                <div>
+                  <span className="text-[10px] text-pine-300 block leading-tight">Total Keranjang</span>
+                  <span className="font-mono font-bold text-xs sm:text-sm text-sun-400">
+                    Rp {totals.totalAmount.toLocaleString('id-ID')}
+                  </span>
+                </div>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                type="button"
+                onClick={() => setMobileTab('cart')}
+                className="px-3.5 py-2 rounded-xl bg-sun-400 text-forest-950 font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <span>Lihat & Bayar</span>
+                <ArrowRight className="w-4 h-4" />
+              </motion.button>
+            </div>
+          )}
+
         </div>
 
         {/* Right Side: Active Cart & Checkout (35%) */}
-        <div className="w-96 xl:w-[420px] flex flex-col bg-white shrink-0 shadow-warm-lg">
+        <div className={`w-full lg:w-96 xl:w-[420px] flex-col bg-white shrink-0 shadow-warm-lg ${mobileTab === 'cart' ? 'flex' : 'hidden lg:flex'}`}>
           
+          {/* Mobile Back Button to Catalog */}
+          <div className="lg:hidden p-3 bg-paper-100 border-b border-pine-200 flex items-center justify-between shrink-0">
+            <button
+              type="button"
+              onClick={() => setMobileTab('catalog')}
+              className="flex items-center gap-1.5 text-xs font-bold text-forest-950 hover:text-emerald-700 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Kembali ke Katalog Menu</span>
+            </button>
+            <span className="text-xs font-mono font-semibold text-pine-600">
+              {cart.reduce((a, b) => a + b.quantity, 0)} Item
+            </span>
+          </div>
+
           {/* Cart Header */}
           <div className="p-4 border-b border-pine-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-forest-800" />
-              <span className="font-serif font-bold text-base text-forest-950">Pesanan Aktif</span>
+              <span className="font-serif font-bold text-base text-forest-950">Keranjang Kasir</span>
               <span className="px-2 py-0.5 rounded-full bg-forest-100 text-forest-900 text-[11px] font-mono font-bold">
                 {cart.reduce((a, b) => a + b.quantity, 0)}
               </span>
@@ -532,17 +754,59 @@ export function POSPage() {
 
           {/* Cart Items List */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3">
+            {/* Banner Notifikasi Pesanan Tamu di Drawer Kasir */}
+            {pendingGuestCount > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 space-y-2 shadow-sm"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400 text-forest-950 flex items-center justify-center font-bold text-sm shrink-0 shadow-sm animate-pulse">
+                    🔔
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold leading-tight truncate">
+                      {pendingGuestCount} Pesanan Tamu Masuk!
+                    </p>
+                    <p className="text-[10px] text-amber-800 leading-tight">
+                      Pelanggan telah order via scan QR Meja
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGuestModal(true)}
+                  className="w-full py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-forest-950 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-sm"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Buka & Konfirmasi ({pendingGuestCount})</span>
+                </button>
+              </motion.div>
+            )}
+
             {cart.length === 0 ? (
-              <div className="py-24 text-center text-ink-400 space-y-2">
+              <div className="py-20 text-center text-ink-400 space-y-2">
                 <ShoppingCart className="w-10 h-10 text-pine-200 mx-auto" />
-                <p className="text-xs">Keranjang masih kosong.</p>
-                <p className="text-[11px] text-ink-400">Pilih menu dari katalog atau scan barcode untuk menambah.</p>
+                <p className="text-xs font-semibold text-ink-600">Keranjang Kasir Kosong</p>
+                <p className="text-[11px] text-ink-400 max-w-[220px] mx-auto">
+                  Pilih menu katalog untuk pesanan langsung di kasir (Walk-in).
+                </p>
               </div>
             ) : (
-              cart.map((item, idx) => {
-                const itemTotal = Number(item.product.price || 0) * item.quantity
-                return (
-                  <div key={idx} className="p-3 rounded-2xl bg-paper-50 border border-pine-200 space-y-2">
+              <AnimatePresence mode="popLayout">
+                {cart.map((item, idx) => {
+                  const itemTotal = Number(item.product.price || 0) * item.quantity
+                  const itemKey = item.product?.id ? `${item.product.id}-${idx}` : `cart-item-${idx}`
+                  return (
+                    <motion.div
+                      key={itemKey}
+                      layout
+                      variants={cartItemVariant}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      className="p-3 rounded-2xl bg-paper-50 border border-pine-200 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <h5 className="font-semibold text-xs text-forest-950 leading-tight">
@@ -595,14 +859,15 @@ export function POSPage() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  </div>
-                )
-              })
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
             )}
           </div>
 
           {/* Cart Summary & Actions */}
-          <div className="p-4 border-t border-pine-100 bg-paper-50 space-y-3">
+          <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-pine-100 bg-paper-50 space-y-3">
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between text-ink-600">
                 <span>Subtotal:</span>
@@ -643,7 +908,7 @@ export function POSPage() {
               <button
                 type="button"
                 disabled={cart.length === 0}
-                onClick={() => setShowPayModal(true)}
+                onClick={handleOpenPayment}
                 className="flex-2 py-3 px-4 rounded-xl bg-forest-900 hover:bg-forest-800 text-white font-semibold text-xs disabled:opacity-40 shadow-warm-md hover:shadow-warm-lg transition cursor-pointer flex items-center justify-center gap-2"
               >
                 <CreditCard className="w-4 h-4" />
@@ -712,14 +977,22 @@ export function POSPage() {
       />
 
       {/* Toast Notifikasi Berhasil */}
-      {successToast && (
-        <div className="fixed top-4 right-4 z-50 bg-forest-950 text-white px-4 py-2.5 rounded-2xl shadow-warm-lg border border-sun-400/50 flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-top-2">
-          <div className="w-5 h-5 rounded-full bg-sun-400 text-forest-950 flex items-center justify-center font-bold">
-            <Check className="w-3.5 h-3.5" />
-          </div>
-          <span>{successToast}</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {successToast && (
+          <motion.div
+            variants={toastVariant}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="fixed top-4 right-4 z-50 bg-forest-950 text-white px-4 py-2.5 rounded-2xl shadow-warm-lg border border-sun-400/50 flex items-center gap-2.5 text-xs font-bold"
+          >
+            <div className="w-5 h-5 rounded-full bg-sun-400 text-forest-950 flex items-center justify-center font-bold">
+              <Check className="w-3.5 h-3.5" />
+            </div>
+            <span>{successToast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   )

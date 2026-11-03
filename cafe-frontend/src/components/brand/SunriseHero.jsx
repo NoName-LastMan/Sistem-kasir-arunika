@@ -4,6 +4,8 @@ import { ArrowRight, Clock, MapPin, Sparkles, CloudSun } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { useOpenStatus } from '../../hooks/useOpenStatus'
+import { motion } from 'framer-motion'
+import { fadeUp, staggerContainer, springGentle } from '../../lib/motion'
 
 export function SunriseHero({ settings }) {
   const { isOpen, statusLabel, scheduleText } = useOpenStatus(settings)
@@ -12,10 +14,15 @@ export function SunriseHero({ settings }) {
     <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-32 border-b border-pine-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-          {/* Kolom Teks Utama */}
-          <div className="lg:col-span-7 flex flex-col items-start">
+          {/* Kolom Teks Utama dengan Staggered Entrance */}
+          <motion.div 
+            variants={staggerContainer(0.07, 0.03)}
+            initial="initial"
+            animate="animate"
+            className="lg:col-span-7 flex flex-col items-start"
+          >
             {/* Status Operasional Dinamis & Cuaca Fajar */}
-            <div className="flex flex-wrap items-center gap-2.5 mb-6">
+            <motion.div variants={fadeUp} className="flex flex-wrap items-center gap-2.5 mb-6">
               <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white border-2 border-pine-200 shadow-warm-sm">
                 <span
                   className={`w-2 h-2 rounded-full ${isOpen ? 'bg-leaf-500 animate-ping' : 'bg-red-500'}`}
@@ -34,20 +41,20 @@ export function SunriseHero({ settings }) {
                   <span>{settings.weather.temperature}, {settings.weather.condition}</span>
                 </div>
               )}
-            </div>
+            </motion.div>
 
             {/* Headline Bersih & Tegas */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-serif text-forest-950 leading-[1.08] tracking-tight mb-6">
+            <motion.h1 variants={fadeUp} className="text-4xl sm:text-5xl lg:text-6xl font-bold font-serif text-forest-950 leading-[1.08] tracking-tight mb-6">
               Ruang temu teduh, kopi andalan, & kerja kreatif di kampus UNIMUS.
-            </h1>
+            </motion.h1>
 
             {/* Paragraf Pendek & Jernih Tanpa Transparan */}
-            <p className="text-lg sm:text-xl text-forest-900 max-w-xl leading-relaxed mb-8 font-normal">
+            <motion.p variants={fadeUp} className="text-lg sm:text-xl text-forest-900 max-w-xl leading-relaxed mb-8 font-normal">
               Terletak di Lantai 2 Gedung Unimus Mart Semarang. Suasana ber-AC yang nyaman untuk nugas, diskusi kolaboratif, meeting privat, serta santap nikmat.
-            </p>
+            </motion.p>
 
             {/* Aksi Utama */}
-            <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
+            <motion.div variants={fadeUp} className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
               <Link to="/menu" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full sm:w-auto font-bold shadow-warm-sm btn-press">
                   <span>Lihat Menu & Mulai Pesan</span>
@@ -63,10 +70,10 @@ export function SunriseHero({ settings }) {
                 <MapPin className="w-4 h-4 text-emerald-700" />
                 <span>Buka di Google Maps</span>
               </a>
-            </div>
+            </motion.div>
 
             {/* Info Lokasi Singkat */}
-            <div className="mt-10 pt-6 border-t-2 border-pine-200 flex flex-wrap items-center gap-6 text-sm text-forest-900 font-medium">
+            <motion.div variants={fadeUp} className="mt-10 pt-6 border-t-2 border-pine-200 flex flex-wrap items-center gap-6 text-sm text-forest-900 font-medium">
               <a
                 href={settings?.googleMapsUrl || 'https://maps.app.goo.gl/dkbegKuRniHS476t5'}
                 target="_blank"
@@ -80,11 +87,16 @@ export function SunriseHero({ settings }) {
                 <Clock className="w-4 h-4 text-emerald-700 shrink-0" />
                 <span>Buka setiap hari: 08.00 - 22.00 WIB</span>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Kolom Momen Visual Signature: Medali Resmi Arunika */}
-          <div className="lg:col-span-5 flex justify-center">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={springGentle}
+            className="lg:col-span-5 flex justify-center"
+          >
             <div className="relative w-full max-w-md rounded-3xl bg-white border-2 border-pine-200 shadow-warm-lg p-7 sm:p-8 flex flex-col items-center justify-between overflow-hidden card-interactive">
               {/* Header Kartu */}
               <div className="w-full flex items-center justify-between text-xs font-bold text-pine-700 uppercase tracking-widest pb-4 border-b border-pine-200">
@@ -134,7 +146,7 @@ export function SunriseHero({ settings }) {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>

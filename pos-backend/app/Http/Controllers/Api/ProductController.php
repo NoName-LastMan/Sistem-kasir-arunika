@@ -130,7 +130,7 @@ class ProductController extends Controller
     public function uploadImage(Request $request)
     {
         $request->validate([
-            'image' => 'nullable|file|mimes:jpeg,png,jpg,webp,svg,gif|max:10240',
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif|max:10240',
             'image_base64' => 'nullable|string',
         ]);
 

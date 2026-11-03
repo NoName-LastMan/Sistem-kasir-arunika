@@ -16,6 +16,20 @@ export function HistoryPage() {
   const orderHistory = useOrderStore(state => state.orderHistory) || []
   const deleteOrder = useOrderStore(state => state.deleteOrderFromHistory)
   const clearHistory = useOrderStore(state => state.clearHistory)
+  const fetchOrderStatus = useOrderStore(state => state.fetchOrderStatus)
+
+  // Sinkronisasi status pesanan aktif saat halaman riwayat dibuka
+  React.useEffect(() => {
+    const activeOrders = orderHistory.filter(o => ['pending', 'processing', 'ready'].includes(o.status))
+    if (activeOrders.length === 0) return
+
+    activeOrders.forEach(o => {
+      const lookupKey = o.invoiceNumber || o.id
+      if (lookupKey) {
+        fetchOrderStatus(lookupKey).catch(() => {})
+      }
+    })
+  }, [])
 
   const addItemToCart = useCartStore(state => state.addItem)
   const setTableCode = useCartStore(state => state.setTableCode)
@@ -65,21 +79,26 @@ export function HistoryPage() {
     }
 
     // Masukkan tiap item ke keranjang
+    let addedCount = 0
     order.items.forEach(item => {
       // Cari produk asli di katalog jika ada untuk referensi lengkap
       const matchedProduct = products.find(p => p.id === item.productId) || {
         id: item.productId,
         name: item.name,
         price: item.unitPrice,
-        image: null
+        image: null,
+        isAvailable: true
       }
 
-      addItemToCart(
-        matchedProduct,
-        item.quantity,
-        [], // modifiers string dipertahankan pada notes
-        item.notes || ''
-      )
+      if (matchedProduct) {
+        addItemToCart(
+          matchedProduct,
+          item.quantity,
+          [],
+          item.notes || ''
+        )
+        addedCount++
+      }
     })
 
     showToast(`Berhasil menambahkan menu dari pesanan #${order.invoiceNumber} ke keranjang!`)
@@ -368,7 +387,7 @@ export function HistoryPage() {
                   <div className="flex items-center gap-2.5 w-full sm:w-auto">
                     {/* Tombol Lacak Pesanan Langsung */}
                     <Link
-                      to={`/pesanan/${order.id}`}
+                      to={`/pesanan/${order.invoiceNumber || order.id}`}
                       className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-forest-900 text-white font-bold text-xs hover:bg-emerald-600 transition-all btn-press shadow-2xs touch-target"
                     >
                       <Clock className="w-3.5 h-3.5" />

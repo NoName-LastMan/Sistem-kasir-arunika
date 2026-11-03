@@ -9,11 +9,28 @@ import { usePolling } from '../hooks/usePolling'
 import { useChime } from '../hooks/useChime'
 import { Button } from '../components/ui/Button'
 import { formatCurrency } from '../api/mappers'
+import { motion, AnimatePresence } from 'framer-motion'
+import { springSnappy, fadeUp, springGentle } from '../lib/motion'
 
 export function TrackPage() {
   const { id } = useParams()
   const activeOrder = useOrderStore(state => state.activeOrder)
   const fetchOrderStatus = useOrderStore(state => state.fetchOrderStatus)
+  const cancelOrder = useOrderStore(state => state.cancelOrder)
+  const [isCancelling, setIsCancelling] = useState(false)
+
+  const handleCancelPendingOrder = async () => {
+    if (!window.confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) return
+    setIsCancelling(true)
+    try {
+      const orderIdentifier = activeOrder.invoiceNumber || activeOrder.id || id
+      await cancelOrder(orderIdentifier, 'Dibatalkan oleh pelanggan dari layar pelacakan HP')
+    } catch (err) {
+      alert(err.friendlyMessage || err.message || 'Gagal membatalkan pesanan.')
+    } finally {
+      setIsCancelling(false)
+    }
+  }
   const { isMuted, toggleMute, playReadyChime } = useChime()
 
   const [isLoading, setIsLoading] = useState(!activeOrder)
@@ -49,7 +66,7 @@ export function TrackPage() {
       previousStatusRef.current = currentStatus
       setAriaAnnouncement(`Pembaruan status pesanan: ${activeOrder.statusInfo?.label}`)
 
-      if (currentStatus === 'ready') {
+      if (currentStatus === 'ready' || currentStatus === 'completed') {
         playReadyChime()
       }
     }
@@ -61,28 +78,47 @@ export function TrackPage() {
     async () => {
       await fetchOrderStatus(id)
     },
-    7000,
-    isTerminal
+    {
+      interval: 2500,
+      enabled: !isTerminal && Boolean(id)
+    }
   )
 
+  // Step indicator
   const steps = [
-    { key: 'pending', step: 1, label: 'Menunggu di Kasir', desc: 'Silakan lakukan pembayaran di kasir' },
-    { key: 'processing', step: 2, label: 'Sedang Disiapkan Dapur', desc: 'Pesanan sedang diracik oleh barista/koki' },
-    { key: 'ready', step: 3, label: 'Pesanan Siap', desc: 'Pesanan siap disajikan ke meja Anda' },
-    { key: 'completed', step: 4, label: 'Selesai', desc: 'Pesanan telah diterima. Selamat menikmati!' }
+    { key: 'pending', label: 'Menunggu Konfirmasi', desc: 'Pesanan telah diterima sistem kasir', step: 1 },
+    { key: 'processing', label: 'Sedang Disiapkan', desc: 'Barista & koki sedang meracik menu', step: 2 },
+    { key: 'ready', label: 'Siap Disajikan', desc: 'Silakan ambil di counter atau tunggu diantar ke meja', step: 3 },
+    { key: 'completed', label: 'Selesai', desc: 'Selamat menikmati sajian Arunika', step: 4 }
   ]
 
-  const currentStepNum = activeOrder?.statusInfo?.step ?? 1
+  const getStepNumber = (status) => {
+    switch (status) {
+      case 'pending': return 1
+      case 'processing': return 2
+      case 'ready': return 3
+      case 'completed': return 4
+      case 'cancelled': return 0
+      default: return 1
+    }
+  }
+
+  const currentStepNum = getStepNumber(activeOrder?.status)
 
   return (
-    <div className="py-12 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Aksesibilitas Live Announcement */}
-      <div aria-live="polite" className="sr-only">
+    <div className="py-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Live Region Tersembunyi untuk Pembaca Layar (A11y) */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
         {ariaAnnouncement}
       </div>
 
-      {/* Navigasi Balik ke Menu & Kontrol Aksi */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      {/* Kontrol Bar Atas: Kembali & Refresh */}
+      <div className="flex items-center justify-between mb-8">
         <Link
           to="/menu"
           className="inline-flex items-center gap-1.5 text-sm font-bold text-pine-700 hover:text-forest-950 transition-colors"
@@ -93,7 +129,8 @@ export function TrackPage() {
 
         <div className="flex items-center gap-2">
           {/* Tombol Refresh Status Manual */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={handleManualRefresh}
             disabled={isManualRefreshing}
             type="button"
@@ -102,10 +139,11 @@ export function TrackPage() {
           >
             <RefreshCw className={`w-3.5 h-3.5 text-forest-800 ${isManualRefreshing ? 'animate-spin text-emerald-700' : ''}`} />
             <span className="hidden sm:inline">{isManualRefreshing ? 'Memperbarui...' : 'Perbarui Status'}</span>
-          </button>
+          </motion.button>
 
           {/* Toggle Notifikasi Bunyi (Chime) */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={toggleMute}
             type="button"
             className="inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl border border-forest-900/15 bg-white hover:bg-mint-100 text-forest-950 transition-colors touch-target shadow-2xs cursor-pointer"
@@ -122,7 +160,7 @@ export function TrackPage() {
                 <span>Bunyi: Aktif</span>
               </>
             )}
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -133,7 +171,12 @@ export function TrackPage() {
           <div className="h-4 w-64 bg-mint-100 mx-auto rounded-md" />
         </div>
       ) : activeOrder ? (
-        <div className="space-y-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={springGentle}
+          className="space-y-8"
+        >
           {/* Kartu Status Header */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-pine-200 shadow-warm-md text-center relative overflow-hidden">
             <div className="relative z-10">
@@ -158,7 +201,28 @@ export function TrackPage() {
             </div>
           </div>
 
-          {/* Linimasa Alur Dapur (Menunggu -> Diproses -> Siap/Selesai) */}
+          {/* Jika Pesanan Dibatalkan / Void */}
+          {(activeOrder.status === 'cancelled' || activeOrder.status === 'voided') ? (
+            <div className="bg-red-50 rounded-2xl p-6 sm:p-8 border-2 border-red-200 text-center space-y-3 shadow-warm-sm">
+              <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <h3 className="font-serif font-bold text-xl text-red-950">Pesanan Dibatalkan</h3>
+              <p className="text-xs sm:text-sm text-red-800 max-w-md mx-auto">
+                {activeOrder.statusInfo?.description || 'Pesanan ini telah dibatalkan oleh staf kasir. Silakan pesan kembali atau hubungi barista kami.'}
+              </p>
+              <div className="pt-2">
+                <Link
+                  to="/menu"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-forest-900 text-white font-bold text-xs hover:bg-forest-800 transition"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Pesan Menu Baru</span>
+                </Link>
+              </div>
+            </div>
+          ) : (
+          /* Linimasa Alur Dapur (Menunggu -> Diproses -> Siap/Selesai) */
           <div className="bg-white rounded-2xl p-6 sm:p-8 border-2 border-pine-200 shadow-warm-sm">
             <h2 className="font-serif font-bold text-lg text-forest-950 mb-6 pb-3 border-b-2 border-pine-200">
               Perjalanan Pesanan Anda
@@ -211,6 +275,27 @@ export function TrackPage() {
               })}
             </div>
           </div>
+          )}
+
+          {/* Tombol Batalkan Pesanan Mandiri (Hanya jika status MASIH pending) */}
+          {activeOrder.status === 'pending' && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border-2 border-amber-300 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs shadow-2xs">
+              <div className="text-amber-950 font-medium">
+                <span className="font-bold text-sm block mb-0.5">Salah pesan menu atau nomor meja?</span>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Anda dapat membatalkan pesanan ini secara mandiri selama kasir belum memproses pembayaran.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelPendingOrder}
+                disabled={isCancelling}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white border border-red-300 text-red-700 hover:bg-red-50 font-bold shrink-0 transition cursor-pointer disabled:opacity-50"
+              >
+                {isCancelling ? 'Membatalkan...' : 'Batalkan Pesanan'}
+              </button>
+            </div>
+          )}
 
           {/* Rincian Item Pesanan */}
           <div className="bg-white rounded-2xl p-6 sm:p-8 border-2 border-pine-200 shadow-warm-sm">
@@ -218,70 +303,58 @@ export function TrackPage() {
               Rincian Item
             </h3>
 
-            <div className="divide-y divide-pine-200 mb-6 text-sm">
+            <div className="divide-y divide-pine-200">
               {(activeOrder.items || []).map((item, idx) => (
-                <div key={idx} className="py-3 flex justify-between items-start">
+                <div key={idx} className="py-3 flex justify-between items-start text-xs sm:text-sm">
                   <div>
-                    <span className="font-semibold text-forest-950">
-                      {item.quantity}x {item.name}
+                    <span className="font-bold text-forest-950 block">
+                      {item.quantity}x {item.product?.name || item.name}
                     </span>
                     {item.modifiers && (
-                      <span className="text-xs text-pine-600 block mt-0.5 font-medium">
-                        {item.modifiers}
+                      <span className="text-xs text-pine-600 block mt-0.5">
+                        +{item.modifiers}
                       </span>
                     )}
                     {item.notes && (
-                      <span className="text-xs italic text-wood-500 block mt-0.5 font-medium">
-                        "{item.notes}"
+                      <span className="text-xs text-amber-800 bg-amber-50 px-2 py-0.5 rounded italic block mt-0.5">
+                        Catatan: {item.notes}
                       </span>
                     )}
                   </div>
-                  <span className="font-bold text-forest-950 shrink-0">
-                    {item.formattedSubtotal}
+                  <span className="font-bold text-forest-950 font-mono">
+                    {formatCurrency(item.subtotal || item.totalPrice)}
                   </span>
                 </div>
               ))}
             </div>
 
-            {/* Total Pembayaran */}
-            <div className="pt-4 border-t-2 border-pine-200 space-y-2 text-sm">
-              <div className="flex justify-between text-pine-700 font-medium">
+            <div className="mt-4 pt-4 border-t-2 border-pine-200 space-y-2 text-xs sm:text-sm">
+              <div className="flex justify-between text-pine-700">
                 <span>Subtotal</span>
-                <span className="text-forest-950 font-bold">{activeOrder.formattedSubtotal}</span>
+                <span className="font-bold text-forest-950">{activeOrder.formattedSubtotal || formatCurrency(activeOrder.subtotal)}</span>
               </div>
-              <div className="flex justify-between text-pine-700 font-medium">
-                <span>Pajak Restoran ({activeOrder.taxRate}%)</span>
-                <span className="text-forest-950 font-bold">{activeOrder.formattedTaxAmount}</span>
+              <div className="flex justify-between text-pine-700">
+                <span>Pajak Restoran (PPN {activeOrder.taxRate ?? 10}%)</span>
+                <span className="font-bold text-forest-950">{activeOrder.formattedTaxAmount || formatCurrency(activeOrder.taxAmount || activeOrder.tax || 0)}</span>
               </div>
-              <div className="pt-2 border-t-2 border-pine-200 flex justify-between font-bold text-base text-forest-950">
-                <span>Total Tagihan</span>
-                <span className="text-emerald-700 text-lg font-bold">{activeOrder.formattedTotalAmount}</span>
+              <div className="flex justify-between text-base font-bold text-emerald-800 pt-2 border-t border-pine-200">
+                <span>Total Biaya</span>
+                <span className="font-mono">{activeOrder.formattedTotalAmount || formatCurrency(activeOrder.totalAmount || activeOrder.total || 0)}</span>
               </div>
-            </div>
-
-            {/* Tautan ke Riwayat Pesanan */}
-            <div className="pt-4 text-center border-t border-pine-200">
-              <Link
-                to="/riwayat"
-                className="inline-flex items-center gap-2 text-xs font-bold text-pine-700 hover:text-emerald-700 underline underline-offset-2 transition-colors"
-              >
-                <Clock className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Lihat Semua Riwayat Pesanan Saya</span>
-              </Link>
             </div>
           </div>
-        </div>
+        </motion.div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-2xl border-2 border-pine-200 p-8">
-          <AlertCircle className="w-10 h-10 text-wood-500 mx-auto mb-3" />
+        <div className="text-center py-16 bg-white rounded-2xl border-2 border-pine-200 p-8 shadow-warm-sm">
+          <AlertCircle className="w-10 h-10 text-red-600 mx-auto mb-3" />
           <h2 className="font-serif font-bold text-xl text-forest-950 mb-2">
             Pesanan tidak ditemukan
           </h2>
           <p className="text-sm text-pine-700 mb-6 font-normal">
-            Nomor pesanan #{id} tidak ditemukan di sistem kasir.
+            Nomor pesanan yang Anda cari mungkin telah kedaluwarsa atau tidak terdaftar.
           </p>
           <Link to="/menu">
-            <Button size="sm">Kembali ke Katalog</Button>
+            <Button size="sm">Buka Katalog Menu</Button>
           </Link>
         </div>
       )}

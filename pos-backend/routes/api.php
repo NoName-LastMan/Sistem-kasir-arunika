@@ -60,10 +60,12 @@ Route::get('/health', function () {
 // Public routes untuk otentikasi staf & aplikasi tamu self-order (cafe-frontend)
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 Route::get('/public/settings', [SettingController::class, 'showPublic']);
+Route::get('/settings/store', [SettingController::class, 'showPublic']);
 Route::get('/public/menu', [ProductController::class, 'publicMenu']);
 Route::get('/public/tables/{code}', [AdminTableController::class, 'publicValidateTable']);
 Route::post('/public/orders', [OrderController::class, 'publicCreateOrder'])->middleware('throttle:30,1');
 Route::get('/public/orders/{id}/status', [OrderController::class, 'publicOrderStatus']);
+Route::post('/public/orders/{id}/cancel', [OrderController::class, 'publicCancelOrder']);
 
 // SSE real-time stream (otentikasi mandiri via query token atau bearer header untuk kompatibilitas browser EventSource)
 Route::get('/orders/stream', [OrderController::class, 'stream']);
@@ -77,7 +79,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Kategori
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::post('/categories', [CategoryController::class, 'store']);
-    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
     // Produk & Barcode & Upload Foto
     Route::get('/products', [ProductController::class, 'index']);
@@ -92,17 +93,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders', [OrderController::class, 'store']);
     Route::post('/orders/{order}/confirm', [OrderController::class, 'confirm']);
     Route::post('/orders/{order}/serve', [OrderController::class, 'serve']);
+    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
     Route::post('/orders/{order}/void', [OrderController::class, 'void']);
-    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
-    Route::get('/orders/{order}', [OrderController::class, 'show']);
-
-    // Hold Order (Simpan Sementara Transaksi)
+    // Hold Order (Simpan Sementara Transaksi) - WAJIB sebelum /orders/{order} agar tidak tertelan wildcard
     Route::get('/orders/held', [HeldOrderController::class, 'index']);
     Route::post('/orders/hold', [HeldOrderController::class, 'store']);
     Route::delete('/orders/held/{heldOrder}', [HeldOrderController::class, 'destroy']);
 
-    // Pengaturan Toko (read-only untuk kasir)
-    Route::get('/settings/store', [SettingController::class, 'showPublic']);
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
+
+
 
     // Manajemen Shift Kasir
     Route::get('/shift/current', [ShiftController::class, 'currentShift']);
@@ -113,14 +114,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // Manajemen Meja Restoran (untuk kasir & admin)
     Route::get('/tables', [AdminTableController::class, 'index']);
 
-    // Laporan Penjualan & Analytics
+    // Laporan Penjualan Operasional (Kasir & Admin)
     Route::get('/reports/daily-revenue', [ReportController::class, 'dailyRevenue']);
     Route::get('/reports/top-products', [ReportController::class, 'topProducts']);
-    Route::get('/reports/sales-summary', [ReportController::class, 'salesSummary']);
     Route::get('/reports/cashier-sales', [ReportController::class, 'cashierSales']);
-    Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss']);
-    Route::get('/reports/export-csv', [ReportController::class, 'exportCsv']);
-    Route::get('/reports/export-excel', [ReportController::class, 'exportExcel']);
+
+    // Laporan Finansial Sensitif & Manajemen Kategori (Khusus Admin & Superadmin)
+    Route::middleware(EnsureAdmin::class)->group(function () {
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+        Route::get('/reports/sales-summary', [ReportController::class, 'salesSummary']);
+        Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss']);
+        Route::get('/reports/export-csv', [ReportController::class, 'exportCsv']);
+        Route::get('/reports/export-excel', [ReportController::class, 'exportExcel']);
+    });
 
     // ==========================================
     // KHUSUS ROUTE ADMIN EXECUTIVE SUITE

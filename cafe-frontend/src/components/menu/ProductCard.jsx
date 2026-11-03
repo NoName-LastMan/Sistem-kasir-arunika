@@ -3,6 +3,8 @@ import { Plus, Coffee } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { useCartStore } from '../../store/cartStore'
+import { motion, AnimatePresence } from 'framer-motion'
+import { badgePop } from '../../lib/motion'
 
 export function ProductCard({ product, onSelect }) {
   const {
@@ -19,9 +21,11 @@ export function ProductCard({ product, onSelect }) {
     .reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <article
+    <motion.article
+      whileHover={isAvailable ? { y: -4, transition: { duration: 0.2 } } : {}}
+      whileTap={isAvailable ? { scale: 0.985 } : {}}
       onClick={() => isAvailable && onSelect(product)}
-      className={`group relative rounded-2xl border-2 card-interactive flex flex-col justify-between h-full bg-white overflow-hidden shadow-warm-sm transition-all ${
+      className={`group relative rounded-2xl border-2 flex flex-col justify-between h-full bg-white overflow-hidden shadow-warm-sm transition-colors ${
         isAvailable
           ? 'border-pine-200 hover:border-emerald-600 hover:shadow-warm-md cursor-pointer'
           : 'border-pine-100 bg-paper-100 opacity-75 cursor-not-allowed'
@@ -36,12 +40,13 @@ export function ProductCard({ product, onSelect }) {
               alt={name}
               onError={() => setImageError(true)}
               loading="lazy"
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-pine-600">
-              <Coffee className="w-10 h-10 mb-1" />
-              <span className="text-[10px] font-bold tracking-widest uppercase">Arunika</span>
+            <div className="w-full h-full flex flex-col items-center justify-center text-emerald-800 bg-gradient-to-br from-paper-100 via-mint-50 to-pine-100">
+              <Coffee className="w-10 h-10 mb-1 opacity-70" />
+              <span className="text-[10px] font-bold tracking-widest uppercase text-forest-900">Arunika</span>
             </div>
           )}
 
@@ -59,11 +64,20 @@ export function ProductCard({ product, onSelect }) {
               )}
             </div>
 
-            {itemInCartCount > 0 && (
-              <span className="bg-forest-900 text-sun-400 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-in fade-in zoom-in-90 duration-200">
-                {itemInCartCount} di keranjang
-              </span>
-            )}
+            <AnimatePresence>
+              {itemInCartCount > 0 && (
+                <motion.span 
+                  key={itemInCartCount}
+                  variants={badgePop}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="bg-forest-900 text-sun-400 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm"
+                >
+                  {itemInCartCount} di keranjang
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -97,7 +111,7 @@ export function ProductCard({ product, onSelect }) {
       <div className="px-4 pb-4 sm:px-5 sm:pb-5 pt-3 border-t-2 border-pine-200 flex items-center justify-between mt-auto bg-white">
         <div>
           <span className="text-[10px] text-pine-600 font-bold uppercase tracking-wider block">Harga</span>
-          <span className="font-bold text-base sm:text-lg text-emerald-800">
+          <span className="font-bold text-base sm:text-lg text-emerald-800 font-mono">
             {formattedPrice}
           </span>
         </div>
@@ -124,6 +138,6 @@ export function ProductCard({ product, onSelect }) {
           </span>
         )}
       </div>
-    </article>
+    </motion.article>
   )
 }

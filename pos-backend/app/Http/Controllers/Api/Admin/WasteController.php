@@ -89,6 +89,14 @@ class WasteController extends Controller
 
     public function summary(Request $request)
     {
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate   = $request->input('end_date', now()->endOfMonth()->toDateString());
+
+        $request->merge([
+            'start_date' => $startDate,
+            'end_date'   => $endDate,
+        ]);
+
         $request->validate([
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',

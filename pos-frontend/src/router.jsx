@@ -62,7 +62,7 @@ export const router = createBrowserRouter([
 
   // Kasir & Operational Routes
   {
-    element: <ProtectedRoute allowedRoles={['cashier', 'admin', 'superadmin']} />,
+    element: <ProtectedRoute allowedRoles={['cashier', 'admin', 'superadmin', 'kitchen']} />,
     children: [
       { path: '/pos', element: withSuspense(POSPage) },
       { path: '/orders', element: withSuspense(OrdersPage) }
@@ -71,7 +71,7 @@ export const router = createBrowserRouter([
 
   // Kitchen Display System (KDS)
   {
-    element: <ProtectedRoute allowedRoles={['kitchen', 'admin', 'superadmin']} />,
+    element: <ProtectedRoute allowedRoles={['kitchen', 'cashier', 'admin', 'superadmin']} />,
     children: [
       { path: '/kitchen', element: withSuspense(KitchenDisplayPage) }
     ]

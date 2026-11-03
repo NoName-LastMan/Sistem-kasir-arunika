@@ -54,9 +54,9 @@ export const useMenuStore = create((set, get) => ({
   toggleEditMode: () => set(state => ({ isEditMode: !state.isEditMode })),
   setEditMode: (val) => set({ isEditMode: Boolean(val) }),
 
-  fetchMenu: async () => {
+  fetchMenu: async (force = false) => {
     // Hindari re-fetching berulang jika data sudah ada
-    if (get().products.length > 0) return
+    if (!force && get().products.length > 0) return
     set({ isLoading: true, error: null })
     try {
       const data = await api.getMenu()

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { modalBackdrop, modalContent } from '../../lib/motion'
 
 export function Dialog({
   isOpen,
@@ -20,11 +22,9 @@ export function Dialog({
       }
     }
 
-    // Kunci scroll body saat dialog terbuka
     document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', handleKeyDown)
 
-    // Focus pertama kali pada dialog
     if (dialogRef.current) {
       dialogRef.current.focus()
     }
@@ -35,41 +35,56 @@ export function Dialog({
     }
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-950/80 animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="dialog-title"
-    >
-      <div
-        ref={dialogRef}
-        tabIndex={-1}
-        className={`w-full ${maxWidth} bg-white rounded-2xl shadow-warm-lg border-2 border-pine-200 overflow-hidden flex flex-col max-h-[90vh] focus:outline-none animate-modal-pop ${className}`}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-pine-200 bg-mint-100">
-          <h3 id="dialog-title" className="text-xl font-bold font-serif text-forest-950">
-            {title}
-          </h3>
-          <button
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dialog-title"
+        >
+          {/* Backdrop with Subtle Blur */}
+          <motion.div
+            variants={modalBackdrop}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="fixed inset-0 bg-forest-950/80 backdrop-blur-xs"
             onClick={onClose}
-            type="button"
-            className="p-1.5 rounded-lg text-forest-950 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 transition-colors"
-            aria-label="Tutup dialog"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+          />
 
-        <div className="p-6 overflow-y-auto flex-1">
-          {children}
+          {/* Dialog Container with Spring Physics */}
+          <motion.div
+            ref={dialogRef}
+            tabIndex={-1}
+            variants={modalContent}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className={`w-full ${maxWidth} bg-white rounded-2xl shadow-warm-lg border-2 border-pine-200 overflow-hidden flex flex-col max-h-[90dvh] focus:outline-none relative z-10 ${className}`}
+          >
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-pine-200 bg-mint-100">
+              <h3 id="dialog-title" className="text-xl font-bold font-serif text-forest-950">
+                {title}
+              </h3>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                type="button"
+                className="p-1.5 rounded-lg text-forest-950 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 transition-colors cursor-pointer"
+                aria-label="Tutup dialog"
+              >
+                <X className="w-5 h-5" />
+              </motion.button>
+            </div>
+
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+              {children}
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   )
 }

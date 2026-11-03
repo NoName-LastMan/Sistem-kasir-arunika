@@ -3,66 +3,20 @@ import { api } from '../api/client'
 
 const STORAGE_KEY = 'arunika_customer_orders_v1'
 
-const SAMPLE_INITIAL_HISTORY = [
-  {
-    id: 'ord-unimus-01',
-    invoiceNumber: 'INV-20261010-001',
-    tableCode: '04',
-    customerName: 'Pelanggan UNIMUS',
-    notes: 'Kopi jangan terlalu manis, tahu bakso disajikan hangat',
-    items: [
-      {
-        productId: 1,
-        name: 'Kopi Susu Arunika (Gula Aren)',
-        quantity: 1,
-        unitPrice: 22000,
-        formattedUnitPrice: 'Rp 22.000',
-        subtotal: 22000,
-        formattedSubtotal: 'Rp 22.000',
-        modifiers: 'Normal (100%), Susu Sapi Segar'
-      },
-      {
-        productId: 11,
-        name: 'Tahu Bakso Goreng Khas Semarang',
-        quantity: 1,
-        unitPrice: 18000,
-        formattedUnitPrice: 'Rp 18.000',
-        subtotal: 18000,
-        formattedSubtotal: 'Rp 18.000',
-        modifiers: ''
-      }
-    ],
-    subtotal: 40000,
-    formattedSubtotal: 'Rp 40.000',
-    taxRate: 10,
-    taxAmount: 4000,
-    formattedTaxAmount: 'Rp 4.000',
-    totalAmount: 44000,
-    formattedTotalAmount: 'Rp 44.000',
-    paymentMethod: 'pay_at_cashier',
-    paymentStatus: 'paid',
-    status: 'completed',
-    statusInfo: {
-      step: 4,
-      label: 'Selesai',
-      description: 'Pesanan telah selesai dinikmati.',
-      isTerminal: true,
-      badgeClass: 'bg-mint-100 text-forest-950 border-emerald-600'
-    },
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString()
-  }
-]
-
 function loadHistoryFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
-    // Jika baru pertama kali buka, isi dengan 1 contoh riwayat nyata
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(SAMPLE_INITIAL_HISTORY))
-    return SAMPLE_INITIAL_HISTORY
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        // Bersihkan dummy mock order lama agar tidak memicu 404 di server
+        return parsed.filter(o => o && o.id !== 'ord-unimus-01' && !String(o.id).startsWith('ord-unimus'))
+      }
+    }
+    return []
   } catch (err) {
     console.warn('Gagal membaca history dari localStorage:', err)
-    return SAMPLE_INITIAL_HISTORY
+    return []
   }
 }
 
@@ -102,7 +56,7 @@ export const useOrderStore = create((set, get) => ({
       const createdOrder = await api.createOrder(payload)
       
       // Simpan pesanan baru ke riwayat pelanggan
-      const currentHistory = get().orderHistory || []
+      const currentHistory = (get().orderHistory || []).filter(o => o.id !== 'ord-unimus-01')
       const updatedHistory = [createdOrder, ...currentHistory.filter(o => o.id !== createdOrder.id)].slice(0, 50)
       
       set({
@@ -120,15 +74,22 @@ export const useOrderStore = create((set, get) => ({
   },
 
   fetchOrderStatus: async (orderId) => {
+    if (!orderId || String(orderId).startsWith('ord-unimus')) return null
     try {
       const updated = await api.getOrderStatus(orderId)
       if (updated) {
-        // Sinkronisasi status di dalam riwayat pelanggan
+        // Sinkronisasi status di dalam riwayat pelanggan (cocokkan id numerik maupun invoice_number)
         const currentHistory = get().orderHistory || []
-        const exists = currentHistory.some(o => o.id === orderId)
+        const isMatch = (item) => (
+          String(item.id) === String(orderId) ||
+          String(item.invoiceNumber) === String(orderId) ||
+          String(item.id) === String(updated.id) ||
+          String(item.invoiceNumber) === String(updated.invoiceNumber)
+        )
+        const exists = currentHistory.some(isMatch)
         if (exists) {
           const updatedHistory = currentHistory.map(o => 
-            o.id === orderId ? { ...o, status: updated.status, statusInfo: updated.statusInfo } : o
+            isMatch(o) ? { ...o, ...updated, status: updated.status, statusInfo: updated.statusInfo } : o
           )
           set({ activeOrder: updated, orderHistory: updatedHistory })
           saveHistoryToStorage(updatedHistory)
@@ -140,6 +101,17 @@ export const useOrderStore = create((set, get) => ({
     } catch (err) {
       console.warn('Gagal memuat status pesanan:', err.friendlyMessage)
       return null
+    }
+  },
+
+  cancelOrder: async (orderId, reason = 'Dibatalkan oleh pelanggan dari smartphone') => {
+    try {
+      const res = await api.cancelOrder(orderId, reason)
+      await get().fetchOrderStatus(orderId)
+      return res
+    } catch (err) {
+      console.warn('Gagal membatalkan pesanan:', err.friendlyMessage || err.message)
+      throw err
     }
   },
 

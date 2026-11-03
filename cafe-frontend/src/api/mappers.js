@@ -103,8 +103,8 @@ export function mapProduct(raw, allModifierGroups = []) {
 
 export function mapTable(raw) {
   return {
-    code: String(raw.code),
-    name: raw.name || `Meja ${raw.code}`,
+    code: String(raw.code || raw.table_number || raw.number || ''),
+    name: raw.name || `Meja ${raw.code || raw.table_number || raw.number || ''}`,
     capacity: raw.capacity || 4,
     area: raw.area || 'Utama'
   }
@@ -178,19 +178,19 @@ export function mapOrder(raw) {
   return {
     id: raw.id,
     invoiceNumber: raw.invoice_number || raw.id,
-    tableCode: raw.table_code || 'Counter',
-    customerName: raw.customer_name || 'Tamu',
+    tableCode: raw.table_code || raw.table?.table_number || raw.table?.number || (raw.order_type === 'takeaway' ? 'Bungkus (Takeaway)' : 'Counter'),
+    customerName: raw.customer_name || 'Tamu Arunika',
     notes: raw.notes || '',
     items: (raw.items || []).map(item => ({
       productId: item.product_id,
-      name: item.product_name || item.name,
+      name: item.product?.name || item.product_name || item.name || 'Menu Arunika',
       quantity: Number(item.quantity || 1),
-      unitPrice: Number(item.unit_price || item.price || 0),
-      formattedUnitPrice: formatCurrency(Number(item.unit_price || item.price || 0)),
+      unitPrice: Number(item.unit_price || item.price || item.product?.price || 0),
+      formattedUnitPrice: formatCurrency(Number(item.unit_price || item.price || item.product?.price || 0)),
       subtotal: Number(item.subtotal || 0),
       formattedSubtotal: formatCurrency(Number(item.subtotal || 0)),
       notes: item.notes || '',
-      modifiers: (item.modifiers || []).map(m => m.name || m).join(', ')
+      modifiers: (item.modifiers || []).map(m => m.modifier_item?.name || m.modifierItem?.name || m.name || (typeof m === 'string' ? m : '')).filter(Boolean).join(', ')
     })),
     subtotal: Number(raw.subtotal || 0),
     formattedSubtotal: formatCurrency(Number(raw.subtotal || 0)),

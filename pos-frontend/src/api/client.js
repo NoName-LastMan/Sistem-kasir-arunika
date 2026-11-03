@@ -1,4 +1,12 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+export function getApiBaseUrl() {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    return `${window.location.protocol}//${window.location.hostname}:8000/api`
+  }
+  return 'http://localhost:8000/api'
+}
+
+export const BASE_URL = getApiBaseUrl()
 
 export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem('pos_token')
@@ -52,6 +60,7 @@ export const api = {
   get: (url, options) => apiRequest(url, { ...options, method: 'GET' }),
   post: (url, body, options) => apiRequest(url, { ...options, method: 'POST', body: JSON.stringify(body) }),
   put: (url, body, options) => apiRequest(url, { ...options, method: 'PUT', body: JSON.stringify(body) }),
+  patch: (url, body, options) => apiRequest(url, { ...options, method: 'PATCH', body: JSON.stringify(body) }),
   delete: (url, options) => apiRequest(url, { ...options, method: 'DELETE' }),
   upload: (url, formData, options) => apiRequest(url, { ...options, method: 'POST', body: formData }),
   downloadCsv: async (url, filename = 'laporan.csv') => {

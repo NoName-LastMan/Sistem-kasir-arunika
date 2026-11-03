@@ -9,7 +9,13 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    host: true
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true
+      }
+    }
   },
   build: {
     target: 'esnext',
@@ -19,7 +25,12 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+            if (
+              id.includes('react') || 
+              id.includes('react-dom') || 
+              id.includes('react-router-dom') || 
+              id.includes('framer-motion')
+            ) {
               return 'vendor-react'
             }
             if (id.includes('lucide-react')) {
@@ -33,6 +44,6 @@ export default defineConfig({
         }
       }
     },
-    chunkSizeWarningLimit: 600
+    chunkSizeWarningLimit: 800
   }
 })

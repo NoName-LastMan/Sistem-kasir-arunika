@@ -46,7 +46,7 @@ export function ProductDetailModal({ product, isOpen, onClose, onAddToCart }) {
   }, [selectedModifiers])
 
   // Jika produk belum dipilih atau modal tidak aktif
-  if (!product || !isOpen) return null
+  if (!product) return null
 
   // Handler toggle pilihan modifier
   const handleToggleModifier = (group, item) => {
@@ -107,6 +107,7 @@ export function ProductDetailModal({ product, isOpen, onClose, onAddToCart }) {
               <img
                 src={product.image}
                 alt={product.name}
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
               />
             </div>

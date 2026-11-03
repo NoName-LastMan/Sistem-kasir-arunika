@@ -42,8 +42,10 @@ export function TableBanner() {
               </button>
             </form>
           ) : (
-            <span className="font-medium text-white">
-              Anda terhubung ke <span className="bg-sun-400 text-forest-950 px-2 py-0.5 rounded font-bold mx-1">Meja {tableCode}</span> — Pesanan diantar langsung ke meja Anda.
+            <span className="font-medium text-white truncate">
+              <span className="hidden sm:inline">Anda terhubung ke </span>
+              <span className="bg-sun-400 text-forest-950 px-2 py-0.5 rounded font-bold mx-1">Meja {tableCode}</span>
+              <span className="hidden md:inline"> — Pesanan diantar langsung ke meja Anda.</span>
             </span>
           )}
         </div>

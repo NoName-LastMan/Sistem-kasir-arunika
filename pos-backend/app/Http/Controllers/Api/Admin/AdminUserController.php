@@ -67,6 +67,12 @@ class AdminUserController extends Controller
      */
     public function update(Request $request, User $user)
     {
+        if ($user->role === 'superadmin' && $request->user()->role !== 'superadmin') {
+            return response()->json([
+                'message' => 'Akses ditolak. Hanya Superadmin (Owner) yang dapat mengubah profil Superadmin.'
+            ], 403);
+        }
+
         $validated = $request->validate([
             'name'      => 'required|string|max:150',
             'email'     => ['required', 'email', Rule::unique('users')->ignore($user->id)],
@@ -87,6 +93,12 @@ class AdminUserController extends Controller
      */
     public function resetPassword(Request $request, User $user)
     {
+        if ($user->role === 'superadmin' && $request->user()->role !== 'superadmin') {
+            return response()->json([
+                'message' => 'Akses ditolak. Hanya Superadmin (Owner) yang dapat mereset password Superadmin.'
+            ], 403);
+        }
+
         $validated = $request->validate([
             'password' => 'required|string|min:6',
         ]);
@@ -109,6 +121,12 @@ class AdminUserController extends Controller
             return response()->json([
                 'message' => 'Anda tidak dapat menghapus akun Anda sendiri'
             ], 400);
+        }
+
+        if ($user->role === 'superadmin') {
+            return response()->json([
+                'message' => 'Akun Superadmin (Owner) dilindungi dan tidak dapat dihapus.'
+            ], 403);
         }
 
         $user->delete();

@@ -21,6 +21,9 @@ class Product extends Model
         'track_stock',
         'image',
         'is_active',
+        'is_best_seller',
+        'is_new',
+        'is_manual_brew',
     ];
 
     protected function casts(): array
@@ -31,6 +34,9 @@ class Product extends Model
             'stock' => 'integer',
             'track_stock' => 'boolean',
             'is_active' => 'boolean',
+            'is_best_seller' => 'boolean',
+            'is_new' => 'boolean',
+            'is_manual_brew' => 'boolean',
         ];
     }
 
@@ -78,5 +84,33 @@ class Product extends Model
         }
 
         return $base;
+    }
+
+    /**
+     * Hitung HPP dinamis (Food Cost) berdasarkan total kebutuhan bahan baku resep BOM.
+     */
+    public function calculateDynamicCostPrice(): float
+    {
+        $totalCost = 0.0;
+        foreach ($this->ingredients as $ingredient) {
+            $qtyNeeded        = (float) ($ingredient->pivot->quantity_needed ?? 0);
+            $conversionFactor = (float) ($ingredient->pivot->conversion_factor ?? 1.0);
+            $costPerUnit      = (float) ($ingredient->cost_per_unit ?? 0);
+
+            $totalCost += ($qtyNeeded * $conversionFactor * $costPerUnit);
+        }
+
+        return round($totalCost, 2);
+    }
+
+    /**
+     * Rasio Food Cost Percentage standar F&B: (HPP / Harga Jual) * 100
+     */
+    public function getFoodCostPercentageAttribute(): float
+    {
+        $sellingPrice = (float) $this->price;
+        $cost = (float) ($this->cost_price ?: $this->calculateDynamicCostPrice());
+
+        return $sellingPrice > 0 ? round(($cost / $sellingPrice) * 100, 1) : 0.0;
     }
 }

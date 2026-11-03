@@ -2,7 +2,23 @@ import { mockSettings, mockCategories, mockProducts, mockModifierGroups } from '
 import { mockCreateOrder, mockGetOrderStatus, mockValidateTable } from './mock/handlers'
 import { mapSettings, mapCategory, mapProduct, mapModifierGroup, mapTable, mapOrder } from './mappers'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+export function getApiBaseUrl() {
+
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL
+
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+
+    return `${window.location.protocol}//${window.location.hostname}:8000/api`
+
+  }
+
+  return 'http://127.0.0.1:8000/api'
+
+}
+
+
+
+const API_BASE_URL = getApiBaseUrl()
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true' || import.meta.env.VITE_USE_MOCK === true
 
 export class ApiError extends Error {
@@ -142,20 +158,11 @@ export const api = {
       }
     }
 
-    try {
-      const res = await request('/public/orders', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      })
-      return mapOrder(res.data || res)
-    } catch (err) {
-      if (err.status === 0 || err.status === 404) {
-        console.warn('[API fallback] Memakai mock createOrder:', err.friendlyMessage)
-        const result = mockCreateOrder(payload)
-        return mapOrder(result.data)
-      }
-      throw err
-    }
+    const res = await request('/public/orders', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+    return mapOrder(res.data || res)
   },
 
   /**
@@ -169,12 +176,19 @@ export const api = {
       return mapOrder(raw)
     }
 
-    try {
-      const res = await request(`/public/orders/${encodeURIComponent(orderId)}/status`)
-      return mapOrder(res.data || res)
-    } catch (err) {
-      const raw = mockGetOrderStatus(orderId)
-      return mapOrder(raw)
-    }
+    const res = await request(`/public/orders/${encodeURIComponent(orderId)}/status`)
+    return mapOrder(res.data || res)
+  },
+
+  /**
+   * Membatalkan pesanan mandiri tamu (hanya jika status masih pending)
+   * POST /api/public/orders/:id/cancel
+   */
+  async cancelOrder(orderId, reason = 'Dibatalkan oleh pelanggan') {
+    const res = await request(`/public/orders/${encodeURIComponent(orderId)}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    })
+    return res
   }
-}
+  }

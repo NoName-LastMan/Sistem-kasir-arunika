@@ -236,11 +236,13 @@ class DatabaseSeeder extends Seeder
             [
                 'category'    => 'warmindo',
                 'sku'         => 'WMD-IND-GRG',
+                'is_best_seller' => true,
                 'name'        => 'Indomie Goreng',
                 'price'       => 8000,
                 'cost'        => 4000,
                 'stock'       => 150,
                 'modifiers'   => ['topping'],
+                'image'       => 'https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'warmindo',
@@ -250,6 +252,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 4000,
                 'stock'       => 120,
                 'modifiers'   => ['topping'],
+                'image'       => 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'warmindo',
@@ -259,24 +262,29 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 7500,
                 'stock'       => 100,
                 'modifiers'   => ['topping'],
+                'image'       => 'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'warmindo',
                 'sku'         => 'WMD-MIE-JAWA',
+                'is_best_seller' => true,
                 'name'        => 'Mie Goreng Jawa',
                 'price'       => 12000,
                 'cost'        => 6000,
                 'stock'       => 90,
                 'modifiers'   => ['topping'],
+                'image'       => 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'warmindo',
                 'sku'         => 'WMD-NAS-GRG',
+                'is_best_seller' => true,
                 'name'        => 'Nasi Goreng Spesial',
                 'price'       => 15000,
                 'cost'        => 7000,
                 'stock'       => 90,
                 'modifiers'   => ['topping'],
+                'image'       => 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'warmindo',
@@ -286,17 +294,20 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 4500,
                 'stock'       => 80,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=600&q=80',
             ],
 
             // Kopi
             [
                 'category'    => 'coffee',
                 'sku'         => 'KOP-SUSU-ARN',
+                'is_best_seller' => true,
                 'name'        => 'Kopi Susu Gula Aren',
                 'price'       => 15000,
                 'cost'        => 5500,
                 'stock'       => 140,
                 'modifiers'   => ['sugar', 'size', 'ice'],
+                'image'       => 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'coffee',
@@ -306,6 +317,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 6000,
                 'stock'       => 100,
                 'modifiers'   => ['sugar', 'size', 'ice'],
+                'image'       => 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'coffee',
@@ -315,6 +327,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 6500,
                 'stock'       => 100,
                 'modifiers'   => ['sugar', 'size', 'ice'],
+                'image'       => 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'coffee',
@@ -324,24 +337,30 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 3500,
                 'stock'       => 80,
                 'modifiers'   => ['size', 'ice'],
+                'image'       => 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'coffee',
                 'sku'         => 'KOP-CAPPUCCINO',
+                'is_best_seller' => true,
                 'name'        => 'Cappuccino',
                 'price'       => 15000,
                 'cost'        => 5000,
                 'stock'       => 80,
                 'modifiers'   => ['size'],
+                'image'       => 'https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'coffee',
                 'sku'         => 'KOP-V60-BREW',
+                'is_best_seller' => true,
+                'is_manual_brew' => true,
                 'name'        => 'V60 Manual Brew',
                 'price'       => 18000,
                 'cost'        => 7000,
                 'stock'       => 50,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'coffee',
@@ -351,17 +370,20 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 3000,
                 'stock'       => 60,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=600&q=80',
             ],
 
             // Non-Coffee
             [
                 'category'    => 'non-coffee',
                 'sku'         => 'NCF-MATCHA',
+                'is_new'         => true,
                 'name'        => 'Matcha Latte',
                 'price'       => 18000,
                 'cost'        => 7500,
                 'stock'       => 90,
                 'modifiers'   => ['sugar', 'size', 'ice'],
+                'image'       => 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'non-coffee',
@@ -371,6 +393,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 5500,
                 'stock'       => 100,
                 'modifiers'   => ['sugar', 'size', 'ice'],
+                'image'       => 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'non-coffee',
@@ -380,6 +403,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 6000,
                 'stock'       => 80,
                 'modifiers'   => ['sugar', 'size', 'ice'],
+                'image'       => 'https://images.unsplash.com/photo-1577968897966-3d4325b36b61?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'non-coffee',
@@ -389,6 +413,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 1200,
                 'stock'       => 200,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'non-coffee',
@@ -398,6 +423,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 2500,
                 'stock'       => 100,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'non-coffee',
@@ -407,6 +433,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 3000,
                 'stock'       => 90,
                 'modifiers'   => ['sugar', 'ice'],
+                'image'       => 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=600&q=80',
             ],
 
             // Minuman Botol
@@ -418,6 +445,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 2500,
                 'stock'       => 120,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1523362628745-0c100150b504?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'bottled',
@@ -427,6 +455,7 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 3000,
                 'stock'       => 110,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'bottled',
@@ -436,17 +465,20 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 4500,
                 'stock'       => 70,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80',
             ],
 
             // Snack & Cemilan
             [
                 'category'    => 'snack',
                 'sku'         => 'SNK-KENTANG',
+                'is_best_seller' => true,
                 'name'        => 'Kentang Goreng',
                 'price'       => 12000,
                 'cost'        => 5000,
                 'stock'       => 90,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'snack',
@@ -456,15 +488,18 @@ class DatabaseSeeder extends Seeder
                 'cost'        => 3500,
                 'stock'       => 80,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1541529086526-db283c563270?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'category'    => 'snack',
                 'sku'         => 'SNK-ROTI-BAKAR',
+                'is_best_seller' => true,
                 'name'        => 'Roti Bakar Coklat Keju',
                 'price'       => 10000,
                 'cost'        => 4500,
                 'stock'       => 70,
                 'modifiers'   => [],
+                'image'       => 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=600&q=80',
             ],
         ];
 
@@ -478,8 +513,12 @@ class DatabaseSeeder extends Seeder
                     'price'       => $item['price'],
                     'cost_price'  => $item['cost'],
                     'stock'       => $item['stock'],
+                    'image'       => $item['image'] ?? null,
                     'track_stock' => true,
                     'is_active'   => true,
+                    'is_best_seller' => $item['is_best_seller'] ?? false,
+                    'is_new'         => $item['is_new'] ?? false,
+                    'is_manual_brew' => $item['is_manual_brew'] ?? false,
                 ]
             );
 

@@ -6,6 +6,8 @@ import {
   X, Plus, Coffee, AlertCircle, Check, Sparkles, 
   DollarSign, Package, RefreshCw
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { modalBackdrop, modalContent, springSnappy } from '../../lib/motion'
 
 export function QuickAddProductModal({ isOpen, onClose, onSuccess, categories = [] }) {
   const { hasRole } = useAuthStore()
@@ -48,7 +50,7 @@ export function QuickAddProductModal({ isOpen, onClose, onSuccess, categories = 
     }
   }, [isOpen, categories])
 
-  if (!isOpen) return null
+  // Controlled via AnimatePresence below
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -104,8 +106,24 @@ export function QuickAddProductModal({ isOpen, onClose, onSuccess, categories = 
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-forest-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-warm-lg border border-pine-200 flex flex-col max-h-[92vh] overflow-hidden">
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+          <motion.div
+            variants={modalBackdrop}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={onClose}
+            className="fixed inset-0 bg-forest-950/70 backdrop-blur-xs"
+          />
+          <motion.div
+            variants={modalContent}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="bg-white rounded-3xl max-w-xl w-full p-4 sm:p-6 shadow-warm-lg border border-pine-200 flex flex-col max-h-[90dvh] overflow-hidden relative z-10"
+          >
         
         {/* Header Modal */}
         <div className="flex items-center justify-between pb-3.5 border-b border-pine-200 shrink-0">
@@ -342,7 +360,9 @@ export function QuickAddProductModal({ isOpen, onClose, onSuccess, categories = 
           </button>
         </div>
 
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   )
 }

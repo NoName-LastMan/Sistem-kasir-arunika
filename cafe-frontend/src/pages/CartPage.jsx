@@ -10,6 +10,8 @@ import { useSettingsStore } from '../store/settingsStore'
 import { CartItemRow } from '../components/cart/CartItemRow'
 import { Button } from '../components/ui/Button'
 import { formatCurrency } from '../api/mappers'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cartItemVariant, springSnappy, fadeUp } from '../lib/motion'
 
 export function CartPage() {
   const navigate = useNavigate()
@@ -58,28 +60,31 @@ export function CartPage() {
         tableCode: tableCode || 'Counter',
         customerName: customerName.trim(),
         items,
-        notes: notes.trim()
+        notes: notes.trim(),
+        subtotal,
+        tax,
+        total: grandTotal,
+        paymentMethod
       })
 
-      if (order && order.id) {
-        // Bersihkan keranjang belanja setelah sukses kirim
-        clearCart()
-        // Arahkan ke halaman pelacakan pesanan
-        navigate(`/pesanan/${order.id}`)
-      }
-    } catch (err) {
-      // Error sudah ditangani di store, keranjang belanja TIDAK hilang
-      console.error('Gagal membuat pesanan:', err)
+      clearCart()
+      navigate(`/pesanan/${order.invoiceNumber || order.id}`)
+    } catch {
+      // Error disimpan di state orderStore
     }
   }
 
   // Jika keranjang kosong
   if (items.length === 0) {
     return (
-      <div className="py-20 max-w-xl mx-auto px-4 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-mint-100 flex items-center justify-center text-emerald-600 mx-auto mb-4">
+      <div className="py-20 max-w-2xl mx-auto px-4 text-center">
+        <motion.div 
+          animate={{ y: [0, -6, 0] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          className="w-16 h-16 rounded-2xl bg-mint-100 flex items-center justify-center text-emerald-600 mx-auto mb-4"
+        >
           <ShoppingBag className="w-8 h-8 opacity-60" />
-        </div>
+        </motion.div>
         <h1 className="text-2xl sm:text-3xl font-bold font-serif text-forest-950 mb-2">
           Keranjang belanja kosong
         </h1>
@@ -128,82 +133,88 @@ export function CartPage() {
             </h2>
 
             <div className="divide-y divide-pine-200">
-              {items.map(item => (
-                <CartItemRow
-                  key={item.itemKey}
-                  item={item}
-                  onUpdateQuantity={updateQuantity}
-                  onRemove={removeItem}
-                />
-              ))}
+              <AnimatePresence mode="popLayout">
+                {items.map(item => (
+                  <motion.div
+                    key={item.itemKey}
+                    layout
+                    variants={cartItemVariant}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                  >
+                    <CartItemRow
+                      item={item}
+                      onUpdateQuantity={updateQuantity}
+                      onRemove={removeItem}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           </div>
 
-          {/* Kartu Informasi Pelanggan & Meja */}
+          {/* Kartu Informasi Pemesan */}
           <div className="bg-white rounded-2xl p-6 border-2 border-pine-200 shadow-warm-sm space-y-4">
             <h2 className="font-serif font-bold text-lg text-forest-900 pb-3 border-b-2 border-pine-200">
-              Informasi Pemesan
+              Informasi Meja & Pemesan
             </h2>
 
-            <div>
-              <label htmlFor="customer-name" className="block text-xs font-bold text-forest-950 mb-1.5">
-                Nama Pemesan <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="customer-name"
-                type="text"
-                required
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Nama Anda untuk panggilan pesanan"
-                className="w-full px-4 py-2.5 rounded-xl bg-paper-50 border-2 border-pine-200 text-sm text-forest-950 placeholder:text-pine-500 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="customer-name" className="block text-xs font-bold text-forest-950 mb-1.5">
+                  Nama Anda / Pemesan <span className="text-red-600">*</span>
+                </label>
+                <input
+                  id="customer-name"
+                  type="text"
+                  required
+                  placeholder="Contoh: Rian, Dini"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border-2 border-pine-200 bg-white text-forest-950 text-sm focus:outline-none focus:border-emerald-600 font-medium"
+                />
+              </div>
 
-            <div>
-              <label htmlFor="table-code" className="block text-xs font-bold text-forest-950 mb-1.5">
-                Nomor Meja (Dari QR Code Meja)
-              </label>
-              <div className="flex gap-2">
+              <div>
+                <label htmlFor="table-code" className="block text-xs font-bold text-forest-950 mb-1.5">
+                  Nomor Meja Anda
+                </label>
                 <input
                   id="table-code"
                   type="text"
+                  placeholder="Contoh: 04, B2, Meja Bar"
                   value={tableCode}
                   onChange={(e) => setTableCode(e.target.value)}
-                  placeholder="Contoh: 07, 03, atau kosongkan jika di counter"
-                  className="w-full px-4 py-2.5 rounded-xl bg-paper-50 border-2 border-pine-200 text-sm text-forest-950 placeholder:text-pine-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-mono font-bold"
+                  className="w-full px-4 py-2.5 rounded-xl border-2 border-pine-200 bg-white text-forest-950 text-sm focus:outline-none focus:border-emerald-600 font-medium"
                 />
               </div>
-              <p className="text-xs text-pine-600 font-medium mt-1">
-                Jika Anda memesan langsung di counter kasir, nomor meja dapat dikosongkan.
-              </p>
             </div>
 
             <div>
               <label htmlFor="order-notes" className="block text-xs font-bold text-forest-950 mb-1.5">
-                Catatan Keseluruhan Pesanan (Opsional)
+                Catatan Keseluruhan (Opsional)
               </label>
               <textarea
                 id="order-notes"
                 rows={2}
+                placeholder="Contoh: Tolong disajikan bersamaan, sediakan sedotan ramah lingkungan..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Catatan tambahan untuk pelayan atau koki..."
-                className="w-full px-4 py-2 rounded-xl bg-paper-50 border-2 border-pine-200 text-sm text-forest-950 placeholder:text-pine-500 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                className="w-full px-4 py-2 rounded-xl border-2 border-pine-200 bg-white text-forest-950 text-sm focus:outline-none focus:border-emerald-600 font-medium resize-none"
               />
             </div>
           </div>
         </div>
 
-        {/* Kolom Kanan: Ringkasan Biaya, Metode Bayar & Tombol Aksi */}
+        {/* Kolom Kanan: Rincian Pembayaran & Tombol Final */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Kartu Ringkasan Harga Server-Aligned */}
-          <div className="bg-white rounded-2xl p-6 border-2 border-pine-200 shadow-warm-sm space-y-4">
-            <h2 className="font-serif font-bold text-lg text-forest-950 pb-3 border-b-2 border-pine-200">
-              Ringkasan Pembayaran
+          <div className="bg-white rounded-2xl p-6 border-2 border-pine-200 shadow-warm-md sticky top-24 space-y-5">
+            <h2 className="font-serif font-bold text-lg text-forest-900 pb-3 border-b-2 border-pine-200">
+              Rincian Pembayaran
             </h2>
 
-            <div className="space-y-2.5 text-sm">
+            <div className="space-y-3 text-sm">
               <div className="flex justify-between text-pine-700 font-medium">
                 <span>Subtotal Menu</span>
                 <span className="font-bold text-forest-950">{formatCurrency(subtotal)}</span>
@@ -214,19 +225,19 @@ export function CartPage() {
               </div>
               <div className="pt-3 border-t-2 border-pine-200 flex justify-between items-baseline">
                 <div>
-                  <span className="font-serif font-bold text-base text-forest-950 block">Total Estimasi</span>
+                  <span className="font-serif font-bold text-lg text-forest-950 block">Total Estimasi</span>
                   <span className="text-[11px] text-wood-500 font-medium italic block">
-                    Estimasi, total final dari kasir
+                    Total final divalidasi saat bayar di kasir
                   </span>
                 </div>
-                <span className="font-bold text-2xl text-emerald-700">
+                <span className="font-bold text-2xl text-emerald-800 font-mono">
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
             </div>
 
-            {/* Pilihan Metode Bayar (Default Alur Toko F&B) */}
-            <div className="pt-4 border-t-2 border-pine-200 space-y-2">
+            {/* Metode Bayar Pelanggan */}
+            <div className="space-y-2.5 pt-2 border-t-2 border-pine-200">
               <span className="block text-xs font-bold text-forest-950">
                 Metode Pembayaran
               </span>
@@ -250,7 +261,7 @@ export function CartPage() {
                 </div>
               </label>
 
-              {/* Opsi QRIS Langsung (Siap di balik flag / petunjuk) */}
+              {/* Opsi QRIS Langsung */}
               <div className="p-3 rounded-xl border-2 border-dashed border-pine-300 bg-paper-100 text-xs text-forest-950 flex items-center justify-between font-medium">
                 <span>QRIS Otomatis dari Meja</span>
                 <span className="bg-forest-950 text-white font-bold px-2 py-0.5 rounded text-[10px]">
@@ -260,14 +271,21 @@ export function CartPage() {
             </div>
 
             {/* Alert Error Jika Ada */}
-            {(validationError || orderError) && (
-              <div className="p-3.5 rounded-xl bg-red-50 border-2 border-red-300 text-red-900 text-xs flex items-start gap-2.5 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
-                <div className="flex-1 font-medium">
-                  <span>{validationError || orderError}</span>
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {(validationError || orderError) && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-3.5 rounded-xl bg-red-50 border-2 border-red-300 text-red-900 text-xs flex items-start gap-2.5 overflow-hidden"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <div className="flex-1 font-medium">
+                    <span>{validationError || orderError}</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Tombol Kirim Pesanan dengan Anti-Double-Submit */}
             <Button

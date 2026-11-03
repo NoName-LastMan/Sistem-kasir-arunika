@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useAuthStore } from '../stores/authStore'
+import { BASE_URL } from '../api/client'
 
 /**
  * Hook Server-Sent Events (SSE) untuk menerima notifikasi pesanan baru / perubahan status secara real-time.
@@ -26,7 +27,7 @@ export function useOrderStream(onOrderUpdate) {
         eventSourceRef.current.close()
       }
 
-      const streamUrl = `/api/orders/stream?token=${encodeURIComponent(token)}`
+      const streamUrl = `${BASE_URL}/orders/stream?token=${encodeURIComponent(token)}`
       try {
         eventSource = new EventSource(streamUrl)
         eventSourceRef.current = eventSource

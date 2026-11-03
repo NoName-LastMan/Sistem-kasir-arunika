@@ -28,6 +28,24 @@ class HeldOrderController extends Controller
      */
     public function store(Request $request)
     {
+        $cartData = $request->input('cart_data') ?? $request->input('items', []);
+
+        $subtotal = $request->input('subtotal');
+        if ($subtotal === null) {
+            $subtotal = 0;
+            foreach ($cartData as $item) {
+                $qty = (int) ($item['quantity'] ?? 1);
+                $price = (float) ($item['price'] ?? $item['product']['price'] ?? 0);
+                $subtotal += $qty * $price;
+            }
+        }
+
+        $request->merge([
+            'order_type' => $request->input('order_type') ?: 'dine_in',
+            'cart_data'  => $cartData,
+            'subtotal'   => $subtotal,
+        ]);
+
         $validated = $request->validate([
             'customer_name'  => 'nullable|string|max:100',
             'reference_note' => 'nullable|string|max:255',

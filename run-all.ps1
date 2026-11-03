@@ -25,7 +25,7 @@ Write-Host "[1/4] Menjalankan Python FastAPI Forecasting Engine (Port 8001)..." 
 Start-Process cmd -ArgumentList "/k cd /d `"$rootDir\forecasting-engine`" && python run.py" -WindowStyle Normal
 
 Write-Host "[2/4] Menjalankan Laravel Backend Core (Port 8000)..." -ForegroundColor Green
-Start-Process cmd -ArgumentList "/k cd /d `"$rootDir\pos-backend`" && `"$PhpPath`" artisan serve --host=127.0.0.1 --port=8000" -WindowStyle Normal
+Start-Process cmd -ArgumentList "/k set PHP_CLI_SERVER_WORKERS=4 && cd /d `"$rootDir\pos-backend`" && `"$PhpPath`" artisan serve --host=0.0.0.0 --port=8000 --no-reload" -WindowStyle Normal
 
 Write-Host "[3/4] Menjalankan POS & KDS Frontend (Port 5173)..." -ForegroundColor Green
 Start-Process cmd -ArgumentList "/k cd /d `"$rootDir\pos-frontend`" && npm run dev" -WindowStyle Normal

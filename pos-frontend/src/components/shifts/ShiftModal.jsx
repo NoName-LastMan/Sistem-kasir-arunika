@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useShiftStore } from '../../stores/shiftStore'
 import { Clock, Banknote, AlertCircle, CheckCircle2, X, Printer, ArrowRight } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { modalBackdrop, modalContent, springSnappy } from '../../lib/motion'
 
 export function ShiftModal({ isOpen, onClose }) {
   const { currentShift, openShift, closeShift, fetchCurrentShift, lastClosedSummary } = useShiftStore()
@@ -18,7 +20,7 @@ export function ShiftModal({ isOpen, onClose }) {
     }
   }, [isOpen])
 
-  if (!isOpen) return null
+  // Controlled via AnimatePresence below
 
   const handleOpen = async (e) => {
     e.preventDefault()
@@ -47,8 +49,24 @@ export function ShiftModal({ isOpen, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-forest-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-md w-full shadow-warm-lg border border-pine-200 overflow-hidden">
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+          <motion.div
+            variants={modalBackdrop}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={onClose}
+            className="fixed inset-0 bg-forest-950/60 backdrop-blur-xs"
+          />
+          <motion.div
+            variants={modalContent}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="bg-white rounded-3xl max-w-md w-full max-h-[90dvh] flex flex-col shadow-warm-lg border border-pine-200 overflow-hidden relative z-10"
+          >
         
         {/* Header */}
         <div className="p-5 border-b border-pine-100 flex items-center justify-between bg-paper-50/50">
@@ -73,7 +91,7 @@ export function ShiftModal({ isOpen, onClose }) {
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs flex items-center gap-2 border border-red-200">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -226,7 +244,9 @@ export function ShiftModal({ isOpen, onClose }) {
           )}
         </div>
 
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   )
 }

@@ -192,33 +192,52 @@ class InventoryService
         Order $order,
         ?int  $userId,
     ): array {
-        $order->loadMissing('items.product.ingredients');
+        $order->loadMissing(['items.product.ingredients', 'items.modifiers.modifierItem.ingredient']);
 
         // Konsolidasikan total kebutuhan per bahan baku untuk mencegah multiple lock/update
         $ingredientNeeds = []; // ingredient_id => ['model' => Ingredient, 'total' => float]
 
         foreach ($order->items as $item) {
+            // 1. Resep Produk Utama
             $product = $item->product;
-            if (! $product) {
-                continue;
+            if ($product) {
+                foreach ($product->ingredients as $ingredient) {
+                    if (! $ingredient->track_stock) {
+                        continue;
+                    }
+
+                    $quantityNeeded   = (float) $ingredient->pivot->quantity_needed;
+                    $conversionFactor = (float) $ingredient->pivot->conversion_factor;
+                    $totalNeeded      = $quantityNeeded * $conversionFactor * $item->quantity;
+
+                    if (! isset($ingredientNeeds[$ingredient->id])) {
+                        $ingredientNeeds[$ingredient->id] = [
+                            'model' => $ingredient,
+                            'total' => 0.0,
+                        ];
+                    }
+                    $ingredientNeeds[$ingredient->id]['total'] += $totalNeeded;
+                }
             }
 
-            foreach ($product->ingredients as $ingredient) {
-                if (! $ingredient->track_stock) {
-                    continue;
+            // 2. Resep Varian / Modifier Tambahan (Topping, Extra Shot, dll)
+            if ($item->relationLoaded('modifiers')) {
+                foreach ($item->modifiers as $orderItemMod) {
+                    $modItem = $orderItemMod->modifierItem;
+                    if ($modItem && $modItem->ingredient_id && (float) $modItem->quantity_needed > 0) {
+                        $modIng = $modItem->ingredient;
+                        if ($modIng && $modIng->track_stock) {
+                            $totalModNeeded = (float) $modItem->quantity_needed * $item->quantity;
+                            if (! isset($ingredientNeeds[$modIng->id])) {
+                                $ingredientNeeds[$modIng->id] = [
+                                    'model' => $modIng,
+                                    'total' => 0.0,
+                                ];
+                            }
+                            $ingredientNeeds[$modIng->id]['total'] += $totalModNeeded;
+                        }
+                    }
                 }
-
-                $quantityNeeded   = (float) $ingredient->pivot->quantity_needed;
-                $conversionFactor = (float) $ingredient->pivot->conversion_factor;
-                $totalNeeded      = $quantityNeeded * $conversionFactor * $item->quantity;
-
-                if (! isset($ingredientNeeds[$ingredient->id])) {
-                    $ingredientNeeds[$ingredient->id] = [
-                        'model' => $ingredient,
-                        'total' => 0.0,
-                    ];
-                }
-                $ingredientNeeds[$ingredient->id]['total'] += $totalNeeded;
             }
         }
 
@@ -265,32 +284,51 @@ class InventoryService
      */
     public function restoreIngredientsForVoid(Order $order, ?int $userId): array
     {
-        $order->loadMissing('items.product.ingredients');
+        $order->loadMissing(['items.product.ingredients', 'items.modifiers.modifierItem.ingredient']);
 
         $ingredientRestores = [];
 
         foreach ($order->items as $item) {
+            // 1. Resep Produk Utama
             $product = $item->product;
-            if (! $product) {
-                continue;
+            if ($product) {
+                foreach ($product->ingredients as $ingredient) {
+                    if (! $ingredient->track_stock) {
+                        continue;
+                    }
+
+                    $quantityNeeded   = (float) $ingredient->pivot->quantity_needed;
+                    $conversionFactor = (float) $ingredient->pivot->conversion_factor;
+                    $totalToRestore   = $quantityNeeded * $conversionFactor * $item->quantity;
+
+                    if (! isset($ingredientRestores[$ingredient->id])) {
+                        $ingredientRestores[$ingredient->id] = [
+                            'model' => $ingredient,
+                            'total' => 0.0,
+                        ];
+                    }
+                    $ingredientRestores[$ingredient->id]['total'] += $totalToRestore;
+                }
             }
 
-            foreach ($product->ingredients as $ingredient) {
-                if (! $ingredient->track_stock) {
-                    continue;
+            // 2. Resep Varian / Modifier Tambahan (Topping, Extra Shot, dll)
+            if ($item->relationLoaded('modifiers')) {
+                foreach ($item->modifiers as $orderItemMod) {
+                    $modItem = $orderItemMod->modifierItem;
+                    if ($modItem && $modItem->ingredient_id && (float) $modItem->quantity_needed > 0) {
+                        $modIng = $modItem->ingredient;
+                        if ($modIng && $modIng->track_stock) {
+                            $totalModRestore = (float) $modItem->quantity_needed * $item->quantity;
+                            if (! isset($ingredientRestores[$modIng->id])) {
+                                $ingredientRestores[$modIng->id] = [
+                                    'model' => $modIng,
+                                    'total' => 0.0,
+                                ];
+                            }
+                            $ingredientRestores[$modIng->id]['total'] += $totalModRestore;
+                        }
+                    }
                 }
-
-                $quantityNeeded   = (float) $ingredient->pivot->quantity_needed;
-                $conversionFactor = (float) $ingredient->pivot->conversion_factor;
-                $totalToRestore   = $quantityNeeded * $conversionFactor * $item->quantity;
-
-                if (! isset($ingredientRestores[$ingredient->id])) {
-                    $ingredientRestores[$ingredient->id] = [
-                        'model' => $ingredient,
-                        'total' => 0.0,
-                    ];
-                }
-                $ingredientRestores[$ingredient->id]['total'] += $totalToRestore;
             }
         }
 

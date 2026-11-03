@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ShoppingBag, Menu, X, QrCode, MapPin, Clock, Music, Pencil, Plus } from 'lucide-react'
 import { useCartStore, selectCartItemCount, selectCartSubtotal } from '../../store/cartStore'
@@ -143,38 +144,46 @@ export function Navbar({ onOpenCart }) {
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-pine-200 animate-in fade-in duration-150 space-y-3">
-            <nav className="flex flex-col gap-1.5">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-3 py-2.5 rounded-lg text-base font-medium text-forest-900 hover:bg-mint-100 transition-colors"
-                >
-                  {link.name}
-                </Link>
-              ))}
-            </nav>
+        {/* Mobile Navigation Drawer with Smooth Framer Motion */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="lg:hidden py-4 border-t border-pine-200 overflow-hidden space-y-3"
+            >
+              <nav className="flex flex-col gap-1.5">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.name}
+                    to={link.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-3 py-2.5 rounded-lg text-base font-medium text-forest-900 hover:bg-mint-100 transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+              </nav>
 
-            {/* Aksi Tambahan di Drawer Mobile */}
-            <div className="pt-3 border-t border-pine-200 flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  setAudioModalOpen(true)
-                }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-mint-50 text-forest-950 border border-emerald-300 text-xs font-bold text-left"
-              >
-                <Music className="w-4 h-4 text-emerald-600" />
-                <span>Ganti Suasana Musik Kafe</span>
-              </button>
-            </div>
-          </div>
-        )}
+              {/* Aksi Tambahan di Drawer Mobile */}
+              <div className="pt-3 border-t border-pine-200 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    setAudioModalOpen(true)
+                  }}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-mint-50 text-forest-950 border border-emerald-300 text-xs font-bold text-left cursor-pointer"
+                >
+                  <Music className="w-4 h-4 text-emerald-600" />
+                  <span>Ganti Suasana Musik Kafe</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </header>
   )

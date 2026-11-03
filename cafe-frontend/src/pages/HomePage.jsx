@@ -22,13 +22,16 @@ export function HomePage() {
   const addItemToCart = useCartStore(state => state.addItem)
 
   const featuredProducts = useMemo(() => {
-    return products.filter(p => p.isBestSeller || p.isNew)
+    const featured = products.filter(p => (p.isBestSeller || p.isNew) && p.isAvailable)
+    if (featured.length > 0) return featured.slice(0, 4)
+    const available = products.filter(p => p.isAvailable)
+    return available.length > 0 ? available.slice(0, 4) : products.slice(0, 4)
   }, [products])
 
   const [selectedProduct, setSelectedProduct] = useState(null)
 
   useEffect(() => {
-    fetchMenu()
+    fetchMenu(true)
   }, [fetchMenu])
 
   return (
@@ -63,7 +66,7 @@ export function HomePage() {
               <ProductCardSkeleton key={n} />
             ))}
           </div>
-        ) : (
+        ) : featuredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {featuredProducts.slice(0, 4).map(product => (
               <ProductCard
@@ -72,6 +75,11 @@ export function HomePage() {
                 onSelect={setSelectedProduct}
               />
             ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-pine-600 bg-paper-100 rounded-2xl border border-pine-200">
+            <Coffee className="w-10 h-10 mx-auto mb-2 text-pine-400" />
+            <p className="text-sm font-medium">Menu favorit sedang disiapkan oleh barista.</p>
           </div>
         )}
       </section>

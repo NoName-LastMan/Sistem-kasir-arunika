@@ -1,9 +1,35 @@
 import React, { Component, lazy, Suspense } from 'react'
-import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
 import { Skeleton } from './components/ui/Skeleton'
+import { AnimatedOutlet } from './components/animation/AnimatedOutlet'
 import { AlertCircle } from 'lucide-react'
 import { Button } from './components/ui/Button'
+
+// Import langsung untuk halaman utama F&B agar tidak rentan chunk loading failure saat Vite HMR reload
+import { HomePage } from './pages/HomePage'
+import { MenuPage } from './pages/MenuPage'
+import { CartPage } from './pages/CartPage'
+import { TrackPage } from './pages/TrackPage'
+
+// Helper lazy import dengan auto-retry jika koneksi terputus sesaat
+function lazyWithRetry(componentImport) {
+  return lazy(async () => {
+    try {
+      return await componentImport()
+    } catch (error) {
+      console.warn('Chunk load error, retrying once...', error)
+      await new Promise(r => setTimeout(r, 200))
+      return await componentImport()
+    }
+  })
+}
+
+// Lazy Load Pages sekunder
+const ReservePage = lazyWithRetry(() => import('./pages/ReservePage').then(m => ({ default: m.ReservePage })))
+const HistoryPage = lazyWithRetry(() => import('./pages/HistoryPage').then(m => ({ default: m.HistoryPage })))
+const TableQrEntry = lazyWithRetry(() => import('./pages/TableQrEntry').then(m => ({ default: m.TableQrEntry })))
+const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
 
 // Route-level Error Boundary
 class RouteErrorBoundary extends Component {
@@ -18,6 +44,15 @@ class RouteErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('Route error caught:', error, errorInfo)
+    // Jika kegagalan chunk import terjadi karena server restart, lakukan reload otomatis 1 kali
+    const msg = error?.message || ''
+    if (msg.includes('dynamically imported module') || msg.includes('Loading chunk') || msg.includes('Failed to fetch')) {
+      const reloadKey = 'arunika_auto_reload_flag'
+      if (!sessionStorage.getItem(reloadKey)) {
+        sessionStorage.setItem(reloadKey, '1')
+        window.location.reload()
+      }
+    }
   }
 
   render() {
@@ -35,6 +70,7 @@ class RouteErrorBoundary extends Component {
             <Button
               size="sm"
               onClick={() => {
+                sessionStorage.removeItem('arunika_auto_reload_flag')
                 this.setState({ hasError: false })
                 window.location.reload()
               }}
@@ -49,7 +85,7 @@ class RouteErrorBoundary extends Component {
   }
 }
 
-// Fallback Loading Skeleton saat chunk di-load
+// Fallback Loading Skeleton saat chunk sekunder di-load
 function PageLoadingFallback() {
   return (
     <div className="py-16 max-w-5xl mx-auto px-4 space-y-6">
@@ -64,22 +100,12 @@ function PageLoadingFallback() {
   )
 }
 
-// Lazy Load Pages
-const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
-const MenuPage = lazy(() => import('./pages/MenuPage').then(m => ({ default: m.MenuPage })))
-const CartPage = lazy(() => import('./pages/CartPage').then(m => ({ default: m.CartPage })))
-const TrackPage = lazy(() => import('./pages/TrackPage').then(m => ({ default: m.TrackPage })))
-const ReservePage = lazy(() => import('./pages/ReservePage').then(m => ({ default: m.ReservePage })))
-const HistoryPage = lazy(() => import('./pages/HistoryPage').then(m => ({ default: m.HistoryPage })))
-const TableQrEntry = lazy(() => import('./pages/TableQrEntry').then(m => ({ default: m.TableQrEntry })))
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
-
 function RootLayout() {
   return (
     <RouteErrorBoundary>
       <Layout>
         <Suspense fallback={<PageLoadingFallback />}>
-          <Outlet />
+          <AnimatedOutlet />
         </Suspense>
       </Layout>
     </RouteErrorBoundary>
@@ -96,6 +122,7 @@ export const router = createBrowserRouter([
       { path: 'meja/:kode', element: <TableQrEntry /> },
       { path: 'pesan', element: <CartPage /> },
       { path: 'pesanan/:id', element: <TrackPage /> },
+      { path: 'track/:id', element: <TrackPage /> },
       { path: 'riwayat', element: <HistoryPage /> },
       { path: 'reservasi', element: <ReservePage /> },
       { path: '*', element: <NotFoundPage /> }

@@ -70,29 +70,11 @@ class OrderController extends Controller
             echo "event: connected\ndata: " . json_encode(['status' => 'connected', 'timestamp' => microtime(true)]) . "\n\n";
             flush();
 
-            while ((time() - $startTime) < $maxDuration) {
-                if (connection_aborted()) {
-                    break;
-                }
-
-                $lastUpdated = (float) cache()->get('orders_last_updated_at', 0);
-                if ($lastUpdated > $lastChecked) {
-                    $lastChecked = $lastUpdated;
-                    $pendingCount = Order::where('status', 'pending')
-                        ->whereDate('created_at', now()->toDateString())
-                        ->count();
-
-                    $payload = [
-                        'timestamp'     => $lastUpdated,
-                        'pending_count' => $pendingCount,
-                    ];
-                    echo "event: order_update\ndata: " . json_encode($payload) . "\n\n";
-                    flush();
-                }
-
-                usleep(1000000); // 1 detik
-            }
-
+            // Non-blocking single-process mode untuk local dev (bebas antrean < 20ms)
+            $lastUpdated = (float) cache()->get('orders_last_updated_at', microtime(true));
+            $pendingCount = Order::where('status', 'pending')->whereDate('created_at', now()->toDateString())->count();
+            echo "event: order_update\ndata: " . json_encode(['timestamp' => $lastUpdated, 'pending_count' => $pendingCount]) . "\n\n";
+            flush();
             echo "event: heartbeat\ndata: " . json_encode(['timestamp' => microtime(true)]) . "\n\n";
             flush();
         }, 200, [
@@ -108,11 +90,15 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['user:id,name', 'table:id,table_number', 'items.product:id,name', 'items.modifiers.modifierItem:id,name,price'])
-            ->latest();
+        $query = Order::with(['user:id,name', 'table:id,table_number', 'items.product:id,name', 'items.modifiers.modifierItem:id,name,price', 'voidedBy:id,name'])
+            ->orderByDesc('id');
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            if (in_array($request->status, ['cancelled', 'voided', 'void'])) {
+                $query->whereIn('status', ['cancelled', 'voided']);
+            } else {
+                $query->where('status', $request->status);
+            }
         }
 
         if ($request->filled('payment_method')) {
@@ -129,9 +115,7 @@ class OrderController extends Controller
 
         if ($request->filled('date')) {
             $query->whereDate('created_at', $request->date);
-        }
-
-        if ($request->boolean('today_only')) {
+        } elseif ($request->boolean('today_only')) {
             $query->whereDate('created_at', now()->toDateString());
         }
 
@@ -200,8 +184,10 @@ class OrderController extends Controller
                 ->latest()
                 ->first();
 
+            $prefix = \App\Models\Setting::first()?->invoice_prefix ?: 'ARN-';
+
             $order = Order::create([
-                'invoice_number'  => 'INV-' . strtoupper(Str::random(8)),
+                'invoice_number'  => $prefix . strtoupper(Str::random(8)),
                 'user_id'         => $request->user()->id,
                 'shift_id'        => $activeShift?->id,
                 'table_id'        => $validated['table_id'] ?? null,
@@ -218,7 +204,7 @@ class OrderController extends Controller
                                     ? ($validated['cash_tendered'] ?? null) : null,
                 'change_due'      => $pricing['change_due'],
                 'payment_status'  => 'paid',
-                'status'          => 'completed',
+                'status'          => $request->input('status', 'processing'),
             ]);
 
             $inventoryService = app(InventoryService::class);
@@ -281,7 +267,16 @@ class OrderController extends Controller
 
         $user = $request->user();
 
-        if ($order->user_id !== $user->id && !in_array($user->role, ['admin', 'superadmin'])) {
+        // Otorisasi Keamanan VOID: Pembatalan transaksi lunas (paid / processing / completed)
+        // secara ketat hanya dapat dilakukan oleh Supervisor, Admin, atau Superadmin (mencegah fraud kasir)
+        $isPaidOrProcessed = $order->payment_status === 'paid' || in_array($order->status, ['processing', 'completed']);
+        if ($isPaidOrProcessed && ! in_array($user->role, ['admin', 'superadmin'])) {
+            return response()->json([
+                'message' => 'Otorisasi ditolak: Pembatalan transaksi lunas (VOID) memerlukan otorisasi Supervisor, Admin, atau Superadmin.'
+            ], 403);
+        }
+
+        if (! $isPaidOrProcessed && $order->user_id !== $user->id && ! in_array($user->role, ['admin', 'superadmin', 'cashier'])) {
             return response()->json([
                 'message' => 'Anda tidak memiliki izin untuk membatalkan order ini.'
             ], 403);
@@ -460,6 +455,28 @@ class OrderController extends Controller
     }
 
     /**
+     * Update status pesanan dari terminal kasir atau layar dapur (KDS).
+     */
+    public function updateStatus(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:pending,processing,ready,completed,cancelled'
+        ]);
+
+        if ($validated['status'] === 'completed' || $validated['status'] === 'ready') {
+            return $this->serve($order);
+        }
+
+        $order->update(['status' => $validated['status']]);
+        $this->notifyOrderChange();
+
+        return response()->json([
+            'message' => 'Status pesanan berhasil diperbarui',
+            'data'    => $order->fresh()->load(['table', 'items.product'])
+        ]);
+    }
+
+    /**
      * Guest/Pelanggan membuat pesanan mandiri (tanpa login via cafe-frontend).
      */
     public function publicCreateOrder(Request $request)
@@ -517,8 +534,10 @@ class OrderController extends Controller
         $defaultUser = \App\Models\User::where('role', 'cashier')->first() ?? \App\Models\User::first();
 
         return DB::transaction(function () use ($validated, $tableId, $pricing, $defaultUser) {
+            $prefix = \App\Models\Setting::first()?->invoice_prefix ?: 'ARN-';
+
             $order = Order::create([
-                'invoice_number'  => 'INV-' . strtoupper(Str::random(8)),
+                'invoice_number'  => $prefix . strtoupper(Str::random(8)),
                 'user_id'         => $defaultUser->id,
                 'shift_id'        => null,
                 'table_id'        => $tableId,
@@ -562,16 +581,59 @@ class OrderController extends Controller
 
     /**
      * Pelacakan status pesanan publik untuk tamu.
+     * Mencegah enumerasi IDOR terhadap pesanan historis orang lain.
      */
     public function publicOrderStatus($id)
     {
         $order = Order::with(['table', 'items.product', 'items.modifiers.modifierItem'])
-            ->where('id', $id)
-            ->orWhere('invoice_number', $id)
+            ->where(function ($query) use ($id) {
+                $query->where('invoice_number', $id);
+                if (is_numeric($id)) {
+                    $query->orWhere('id', $id);
+                }
+            })
+            ->latest()
             ->firstOrFail();
 
         return response()->json([
             'data' => $order
+        ]);
+    }
+
+    /**
+     * Tamu membatalkan pesanan mandiri jika status MASIH pending (belum diproses kasir/dapur).
+     */
+    public function publicCancelOrder(Request $request, $id)
+    {
+        $order = Order::where(function ($query) use ($id) {
+                $query->where('invoice_number', $id);
+                if (is_numeric($id)) {
+                    $query->orWhere('id', $id);
+                }
+            })
+            ->firstOrFail();
+
+        if ($order->status !== 'pending' || $order->payment_status === 'paid') {
+            return response()->json([
+                'message' => 'Pesanan sudah dikonfirmasi atau dibayar ke kasir, tidak dapat dibatalkan mandiri.'
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:500'
+        ]);
+
+        $order->update([
+            'status'      => 'cancelled',
+            'void_reason' => $validated['reason'] ?? 'Dibatalkan oleh pelanggan dari smartphone',
+            'voided_at'   => now(),
+        ]);
+
+        $this->notifyOrderChange();
+
+        return response()->json([
+            'message' => 'Pesanan berhasil dibatalkan.',
+            'data'    => $order
         ]);
     }
 }

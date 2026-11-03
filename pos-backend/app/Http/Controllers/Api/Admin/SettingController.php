@@ -14,14 +14,14 @@ class SettingController extends Controller
     public function show()
     {
         $setting = Setting::firstOrCreate([], [
-            'store_name'          => 'Warmindo & Cafe POS',
-            'store_address'       => 'Jl. Contoh Alamat No. 123',
-            'store_phone'         => '0812-3456-7890',
-            'receipt_header'      => 'WARMINDO & CAFE POS',
-            'receipt_footer'      => 'Terima kasih atas kunjungan Anda!',
+            'store_name'          => 'Arunika Coffee and Space',
+            'store_address'       => 'Lt. 2 Gedung Unimus Mart, Jl. Kedungmundu No. 18, Semarang',
+            'store_phone'         => '0889-8572-2088',
+            'receipt_header'      => 'ARUNIKA COFFEE & SPACE',
+            'receipt_footer'      => 'Terima kasih atas kunjungan Anda! Follow IG @arunika.coffee',
             'default_tax_rate'     => 10.00,
             'service_charge_rate' => 0.00,
-            'invoice_prefix'      => 'INV-',
+            'invoice_prefix'      => 'ARN-',
         ]);
 
         return response()->json([
@@ -36,14 +36,14 @@ class SettingController extends Controller
     public function showPublic()
     {
         $setting = Setting::firstOrCreate([], [
-            'store_name'          => 'Warmindo & Cafe POS',
-            'store_address'       => 'Jl. Contoh Alamat No. 123',
-            'store_phone'         => '0812-3456-7890',
-            'receipt_header'      => 'WARMINDO & CAFE POS',
-            'receipt_footer'      => 'Terima kasih atas kunjungan Anda!',
+            'store_name'          => 'Arunika Coffee and Space',
+            'store_address'       => 'Lt. 2 Gedung Unimus Mart, Jl. Kedungmundu No. 18, Semarang',
+            'store_phone'         => '0889-8572-2088',
+            'receipt_header'      => 'ARUNIKA COFFEE & SPACE',
+            'receipt_footer'      => 'Terima kasih atas kunjungan Anda! Follow IG @arunika.coffee',
             'default_tax_rate'     => 10.00,
             'service_charge_rate' => 0.00,
-            'invoice_prefix'      => 'INV-',
+            'invoice_prefix'      => 'ARN-',
         ]);
 
         return response()->json([

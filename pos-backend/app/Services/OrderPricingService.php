@@ -76,21 +76,24 @@ class OrderPricingService
      */
     public function calculateTax(float $taxableAmount, float $taxRate): float
     {
-        return round(($taxableAmount * $taxRate) / 100, 2);
+        return round(($taxableAmount * max(0.0, $taxRate)) / 100, 2);
     }
 
     /**
-     * Hitung kembalian tunai. Throw jika uang kurang.
+     * Hitung kembalian tunai. Throw jika uang kurang dengan proteksi presisi float IEEE 754.
      */
     public function calculateChangeDue(float $totalAmount, float $cashTendered): float
     {
-        if ($cashTendered < $totalAmount) {
+        $roundedTendered = round($cashTendered, 2);
+        $roundedTotal    = round($totalAmount, 2);
+
+        if ($roundedTendered < $roundedTotal) {
             throw ValidationException::withMessages([
                 'cash_tendered' => ['Uang tunai kurang dari total tagihan'],
             ]);
         }
 
-        return round($cashTendered - $totalAmount, 2);
+        return max(0.0, round($roundedTendered - $roundedTotal, 2));
     }
 
     /**

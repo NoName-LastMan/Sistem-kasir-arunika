@@ -8,6 +8,8 @@ import { ProductDetailModal } from '../components/menu/ProductDetailModal'
 import { ManualBrewSection } from '../components/menu/ManualBrewSection'
 import { ProductCardSkeleton } from '../components/ui/Skeleton'
 import { Coffee, SearchX } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { staggerContainer, fadeUp } from '../lib/motion'
 
 export function MenuPage() {
   const categories = useMenuStore(state => state.categories)
@@ -105,7 +107,7 @@ export function MenuPage() {
               setSearchQuery('')
               setActiveCategory('all')
             }}
-            className="text-sm font-semibold text-emerald-600 hover:text-forest-900 underline underline-offset-4"
+            className="text-sm font-semibold text-emerald-600 hover:text-forest-900 underline underline-offset-4 cursor-pointer"
           >
             Lihat semua menu
           </button>
@@ -128,15 +130,22 @@ export function MenuPage() {
                   Espresso, Makanan & Camilan
                 </h3>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <motion.div 
+                key={activeCategory + '-' + searchQuery}
+                variants={staggerContainer(0.04, 0.02)}
+                initial="initial"
+                animate="animate"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              >
                 {regularProducts.map(product => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onSelect={setSelectedProduct}
-                  />
+                  <motion.div key={product.id} variants={fadeUp}>
+                    <ProductCard
+                      product={product}
+                      onSelect={setSelectedProduct}
+                    />
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </div>
           )}
         </div>
