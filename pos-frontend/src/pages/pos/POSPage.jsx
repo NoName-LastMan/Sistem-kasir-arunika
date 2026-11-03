@@ -20,7 +20,7 @@ import { cartItemVariant, toastVariant, badgePop, springSnappy } from '../../lib
 import { 
   Search, ShoppingCart, Coffee, Trash2, Plus, Minus, Bookmark, Menu, X, 
   CreditCard, LayoutGrid, Clock, LogOut, Utensils, History,
-  FileText, Shield, AlertCircle, Check, Bell,
+  FileText, Shield, AlertCircle, Check, Bell, Eye,
   ArrowLeft, ArrowRight
 } from 'lucide-react'
 
