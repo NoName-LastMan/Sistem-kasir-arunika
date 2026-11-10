@@ -14,7 +14,7 @@ class AdminModifierController extends Controller
      */
     public function indexGroup()
     {
-        $groups = ModifierGroup::with('items')->latest()->get();
+        $groups = ModifierGroup::with(['items.ingredient:id,name,base_unit'])->latest()->get();
 
         return response()->json([
             'message' => 'Daftar grup modifier & varian',
@@ -100,9 +100,13 @@ class AdminModifierController extends Controller
             'modifier_group_id' => 'required|exists:modifier_groups,id',
             'name'              => 'required|string|max:100',
             'price'             => 'required|numeric|min:0',
+            'ingredient_id'     => 'nullable|exists:ingredients,id',
+            'quantity_needed'   => 'nullable|numeric|min:0',
         ]);
 
-        $item = ModifierItem::create($validated);
+        $validated['quantity_needed'] = $validated['quantity_needed'] ?? 0;
+
+        $item = ModifierItem::create($validated)->load('ingredient:id,name,base_unit');
 
         return response()->json([
             'message' => 'Item modifier berhasil dibuat',
@@ -116,15 +120,19 @@ class AdminModifierController extends Controller
     public function updateItem(Request $request, ModifierItem $modifierItem)
     {
         $validated = $request->validate([
-            'name'  => 'required|string|max:100',
-            'price' => 'required|numeric|min:0',
+            'name'            => 'required|string|max:100',
+            'price'           => 'required|numeric|min:0',
+            'ingredient_id'   => 'nullable|exists:ingredients,id',
+            'quantity_needed' => 'nullable|numeric|min:0',
         ]);
+
+        $validated['quantity_needed'] = $validated['quantity_needed'] ?? 0;
 
         $modifierItem->update($validated);
 
         return response()->json([
             'message' => 'Item modifier berhasil diperbarui',
-            'data'    => $modifierItem
+            'data'    => $modifierItem->load('ingredient:id,name,base_unit')
         ]);
     }
 

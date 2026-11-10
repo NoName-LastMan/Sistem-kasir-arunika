@@ -68,7 +68,7 @@ export const api = {
     link.click()
     window.URL.revokeObjectURL(link.href)
   },
-  downloadFile: async (url, filename = 'laporan.xls') => {
+  downloadFile: async (url, filename = 'laporan.xlsx') => {
     const blob = await apiRequest(url, { responseType: 'blob' })
     const link = document.createElement('a')
     link.href = window.URL.createObjectURL(blob)

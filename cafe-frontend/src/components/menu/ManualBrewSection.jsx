@@ -6,12 +6,12 @@ export function ManualBrewSection({ products, onSelectProduct, onEditProduct }) 
   if (!products || products.length === 0) return null
 
   return (
-    <section className="my-14 rounded-3xl bg-forest-950 text-white p-8 sm:p-10 border-2 border-sun-400 shadow-warm-lg relative overflow-hidden">
+    <section className="my-8 sm:my-14 rounded-3xl bg-forest-950 text-white p-5 sm:p-8 lg:p-10 border-2 border-sun-400 shadow-warm-lg relative overflow-hidden w-full min-w-0">
       {/* Header Bagian Seduh Manual */}
-      <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b-2 border-pine-700">
-        <div>
+      <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-6 sm:mb-10 pb-5 sm:pb-6 border-b-2 border-pine-700">
+        <div className="min-w-0">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-forest-900 text-sun-400 text-xs font-bold mb-3 border border-sun-400 shadow-2xs">
-            <Coffee className="w-3.5 h-3.5" />
+            <Coffee className="w-3.5 h-3.5 shrink-0" />
             <span>Slow Bar & Single Origin</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif text-white mb-2">
@@ -22,7 +22,7 @@ export function ManualBrewSection({ products, onSelectProduct, onEditProduct }) 
           </p>
         </div>
 
-        <div className="flex items-center gap-4 text-xs font-semibold text-mint-100">
+        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-mint-100 shrink-0">
           <div className="flex items-center gap-1.5">
             <Droplets className="w-4 h-4 text-emerald-400" />
             <span>V60 Dripper</span>

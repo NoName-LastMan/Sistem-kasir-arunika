@@ -271,7 +271,7 @@ export function ForecastingPage() {
 
       {/* AI Narrative Intelligence Banner */}
       {aiNarrative && (
-        <div className="p-6 rounded-3xl bg-linear-to-r from-forest-950 via-forest-900 to-pine-900 text-white shadow-warm-lg border border-forest-800 relative overflow-hidden">
+        <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-forest-950 via-forest-900 to-forest-800 text-white shadow-warm-lg border border-forest-800 relative overflow-hidden">
           <div className="flex items-center gap-2.5 mb-3">
             <div className="p-1.5 rounded-xl bg-sun-400/20 text-sun-400 border border-sun-400/30">
               <Sparkles className="w-4 h-4" />
@@ -280,7 +280,7 @@ export function ForecastingPage() {
               {isSuperadmin ? 'AI Executive Strategic Briefing' : 'AI Operational Kitchen Advice'}
             </h3>
           </div>
-          <p className="text-xs text-pine-100 leading-relaxed max-w-4xl font-normal opacity-95 whitespace-pre-line">
+          <p className="text-xs sm:text-sm text-mint-100 leading-relaxed max-w-4xl font-normal whitespace-pre-line">
             {aiNarrative}
           </p>
         </div>
@@ -289,8 +289,8 @@ export function ForecastingPage() {
       {/* Owner Financial Budget & Model Accuracy Cards (If Superadmin) */}
       {isSuperadmin && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-5 rounded-2xl bg-white border border-pine-200 shadow-warm-sm flex items-center justify-between">
-            <div>
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-pine-200 shadow-warm-sm flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">
                 Estimasi Modal Belanja 7 Hari Ke Depan
               </span>
@@ -301,13 +301,13 @@ export function ForecastingPage() {
                 Kebutuhan Kritis: Rp {Number(financialSummary?.critical_reorder_budget ?? 0).toLocaleString('id-ID')}
               </span>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right shrink-0">
               <span className="text-xs text-ink-500 block">Kesiapan Cashflow</span>
               <span className="text-xs font-semibold text-emerald-700">Pre-computed Materialized</span>
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white border border-pine-200 shadow-warm-sm flex items-center justify-between">
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-pine-200 shadow-warm-sm flex flex-wrap items-center justify-between gap-3">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">
                 Akurasi Mesin Prediksi (Self-Evaluating)

@@ -218,18 +218,18 @@ class ReportController extends Controller
     }
 
     /**
-     * Ekspor Seluruh 9 Laporan Konsolidasi Menjadi 1 File Excel Multi-Sheet untuk Owner.
+     * Ekspor Seluruh 9 Laporan Konsolidasi Menjadi 1 File Excel (.xlsx) Multi-Sheet untuk Owner.
      */
     public function exportExcel(Request $request)
     {
         $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', now()->toDateString());
 
-        $xmlContent = app(\App\Services\MasterReportExcelService::class)->generateMasterWorkbook($startDate, $endDate);
-        $filename = "Master_Laporan_Konsolidasi_Arunika_{$startDate}_sd_{$endDate}.xls";
+        $xlsxBinary = app(\App\Services\MasterReportExcelService::class)->generateMasterWorkbook($startDate, $endDate);
+        $filename = "Master_Laporan_Konsolidasi_Arunika_{$startDate}_sd_{$endDate}.xlsx";
 
-        return response($xmlContent, 200, [
-            'Content-Type'        => 'application/vnd.ms-excel; charset=UTF-8',
+        return response($xlsxBinary, 200, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
             'Cache-Control'       => 'max-age=0, no-cache, must-revalidate, proxy-revalidate',
             'Pragma'              => 'public',

@@ -41,37 +41,63 @@
     --border-subtle: #C8DDD0;
   }
 
-  body {
+  html, body {
+    overflow-x: clip;
+    max-width: 100%;
     background-color: var(--bg-page);
     color: var(--text-main);
     font-family: var(--font-sans);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #C8DDD0 transparent;
+  }
+
+  button, a, select, input, textarea {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    input, select, textarea {
+      font-size: max(16px, 1em);
+    }
   }
 }
 
-/* Print CSS khusus Thermal Receipt 58mm & 80mm */
+/* Print CSS khusus Thermal Receipt 58mm & 80mm (scoped saat ReceiptModal aktif) */
 @media print {
-  body * {
-    visibility: hidden;
+  html:has(body.arunika-receipt-open),
+  body.arunika-receipt-open {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
   }
-  #thermal-receipt, #thermal-receipt * {
-    visibility: visible;
+  body.arunika-receipt-open > *:not(#thermal-receipt-print-root) {
+    display: none !important;
   }
-  #thermal-receipt {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    margin: 0;
-    padding: 2mm;
-    font-family: var(--font-mono);
-    color: black !important;
-    background: white !important;
+  body.arunika-receipt-open #thermal-receipt-print-root {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
-  @page {
-    margin: 0;
-    size: auto;
+  body.arunika-receipt-open #thermal-receipt-print-root .thermal-receipt-sheet {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+    font-family: var(--font-mono) !important;
+    color: #000000 !important;
+    background: #ffffff !important;
   }
 }
 
