@@ -124,85 +124,85 @@ export function OrdersPage() {
   return (
     <div className="min-h-screen bg-paper-50 flex flex-col font-sans">
       {/* Header */}
-      <header className="h-16 bg-forest-900 text-white px-4 sm:px-6 flex items-center justify-between shadow-warm-md shrink-0">
-        <div className="flex items-center gap-4">
+      <header className="min-h-16 py-2.5 sm:py-0 sm:h-16 bg-forest-900 text-white px-3 sm:px-6 flex items-center justify-between gap-2 shadow-warm-md shrink-0">
+        <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
           <Link
             to="/pos"
-            className="p-2 rounded-xl bg-forest-800 text-pine-200 hover:text-white hover:bg-forest-700 transition cursor-pointer"
+            className="p-2 rounded-xl bg-forest-800 text-pine-200 hover:text-white hover:bg-forest-700 transition cursor-pointer shrink-0"
             title="Kembali ke Layar Kasir POS"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Link>
-          <div>
-            <h1 className="font-serif font-bold text-lg leading-tight flex items-center gap-2">
-              <span>Riwayat Transaksi & Nota Kasir</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="min-w-0">
+            <h1 className="font-serif font-bold text-sm sm:text-lg leading-tight flex items-center gap-2 truncate">
+              <span className="truncate">Riwayat Transaksi & Nota</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             </h1>
-            <p className="text-[10px] text-pine-300 font-mono">Pencarian nota, audit penjualan real-time & pembatalan (Void)</p>
+            <p className="hidden sm:block text-[10px] text-pine-300 font-mono truncate">Pencarian nota, audit penjualan real-time & pembatalan (Void)</p>
           </div>
         </div>
 
         <Link
           to="/pos"
-          className="px-4 py-2 rounded-xl bg-sun-400 text-forest-950 hover:bg-sun-400/90 text-xs font-semibold transition cursor-pointer shadow-sm"
+          className="px-3 sm:px-4 py-2 rounded-xl bg-sun-400 text-forest-950 hover:bg-sun-400/90 text-xs font-semibold transition cursor-pointer shadow-sm shrink-0 whitespace-nowrap"
         >
           <span className="hidden sm:inline">Kembali ke </span>Kasir POS
         </Link>
       </header>
 
       {/* Main Content Area */}
-      <div className="p-3 sm:p-6 max-w-7xl mx-auto w-full space-y-4 flex-1">
+      <div className="p-3 sm:p-6 max-w-7xl mx-auto w-full space-y-4 flex-1 min-w-0">
         
         {/* Quick KPI Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-pine-200 shadow-warm-xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-forest-900/10 text-forest-900 flex items-center justify-center shrink-0">
-              <Receipt className="w-5 h-5" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-pine-200 shadow-warm-xs flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-forest-900/10 text-forest-900 flex items-center justify-center shrink-0">
+              <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <span className="text-[10px] text-ink-500 font-bold uppercase tracking-wider block">Total Transaksi</span>
-              <span className="font-mono text-lg font-bold text-forest-950">{stats.totalTransactions} Nota</span>
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] text-ink-500 font-bold uppercase tracking-wider block truncate">Total Transaksi</span>
+              <span className="font-mono text-sm sm:text-lg font-bold text-forest-950 block">{stats.totalTransactions} Nota</span>
             </div>
           </div>
 
-          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-pine-200 shadow-warm-xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600/10 text-emerald-700 flex items-center justify-center shrink-0">
-              <DollarSign className="w-5 h-5" />
+          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-pine-200 shadow-warm-xs flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-600/10 text-emerald-700 flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div className="truncate">
-              <span className="text-[10px] text-ink-500 font-bold uppercase tracking-wider block">Omzet Bersih</span>
-              <span className="font-mono text-lg font-bold text-emerald-700 truncate block">
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] text-ink-500 font-bold uppercase tracking-wider block truncate">Omzet Bersih</span>
+              <span className="font-mono text-sm sm:text-lg font-bold text-emerald-700 block break-words">
                 Rp {stats.totalRevenue.toLocaleString('id-ID')}
               </span>
             </div>
           </div>
 
-          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-pine-200 shadow-warm-xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0">
-              <Clock className="w-5 h-5" />
+          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-pine-200 shadow-warm-xs flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <span className="text-[10px] text-ink-500 font-bold uppercase tracking-wider block">Menunggu Kasir</span>
-              <span className="font-mono text-lg font-bold text-amber-700">{stats.pendingOrders} Pesanan</span>
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] text-ink-500 font-bold uppercase tracking-wider block truncate">Menunggu Kasir</span>
+              <span className="font-mono text-sm sm:text-lg font-bold text-amber-700 block">{stats.pendingOrders} Pesanan</span>
             </div>
           </div>
 
-          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-pine-200 shadow-warm-xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-600 flex items-center justify-center shrink-0">
-              <Ban className="w-5 h-5" />
+          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-pine-200 shadow-warm-xs flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-red-500/10 text-red-600 flex items-center justify-center shrink-0">
+              <Ban className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <span className="text-[10px] text-ink-500 font-bold uppercase tracking-wider block">Dibatalkan (Void)</span>
-              <span className="font-mono text-lg font-bold text-red-600">{stats.voidOrders} Nota</span>
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] text-ink-500 font-bold uppercase tracking-wider block truncate">Dibatalkan (Void)</span>
+              <span className="font-mono text-sm sm:text-lg font-bold text-red-600 block">{stats.voidOrders} Nota</span>
             </div>
           </div>
         </div>
 
         {/* Filter Bar */}
-        <div className="bg-white p-4 rounded-2xl border border-pine-200 flex flex-wrap items-center justify-between gap-3 shadow-warm-sm">
-          <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-pine-200 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 shadow-warm-sm">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 flex-1 w-full min-w-0">
             {/* Search Input */}
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
               <Search className="w-4 h-4 text-pine-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"

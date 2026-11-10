@@ -16,7 +16,7 @@ export function AnimatedOutlet() {
           initial="initial"
           animate="animate"
           exit="exit"
-          className="flex-1 flex flex-col w-full min-h-0"
+          className="flex-1 flex flex-col w-full min-w-0 min-h-0"
         >
           {element}
         </motion.div>

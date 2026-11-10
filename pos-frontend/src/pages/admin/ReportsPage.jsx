@@ -52,7 +52,7 @@ export function ReportsPage() {
     try {
       await api.downloadFile(
         `/reports/export-excel?start_date=${startDate}&end_date=${endDate}`,
-        `Master_Laporan_Arunika_${startDate}_sd_${endDate}.xls`
+        `Master_Laporan_Arunika_${startDate}_sd_${endDate}.xlsx`
       )
     } catch (err) {
       alert('Gagal mengekspor Master Excel: ' + (err.message || 'Error'))
@@ -163,7 +163,7 @@ export function ReportsPage() {
               Satu File Excel untuk Seluruh 9 Modul Laporan Restoran
             </h2>
             <p className="text-xs text-pine-100 leading-relaxed">
-              Kini Owner tidak perlu mengekspor laporan secara terpisah. Tombol <strong>"Export Master Excel"</strong> menggabungkan seluruh modul (Omzet, HPP, Margin, Menu Terlaris, Performa Kasir, Limbah Dapur, Audit Opname Anomali, Prediksi Stok AI, dan Detail Transaksi) ke dalam <strong>satu file spreadsheet multi-tab</strong> yang rapi, berformat mata uang, dan siap dianalisis di Microsoft Excel.
+              Kini Owner tidak perlu mengekspor laporan secara terpisah. Tombol <strong>"Export Master Excel"</strong> menggabungkan seluruh modul (Omzet, HPP, Margin, Menu Terlaris, Performa Kasir &amp; Shift, Limbah Dapur, Audit Opname Anomali, Prediksi Stok AI, dan Detail Transaksi) ke dalam <strong>satu workbook .xlsx modern multi-tab</strong> dengan format mata uang Rupiah, formula dinamis, filter otomatis, dan grafik visual siap cetak di Microsoft Excel.
             </p>
           </div>
 
@@ -178,7 +178,7 @@ export function ReportsPage() {
             ) : (
               <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
             )}
-            <span>{exportingExcel ? 'Menyusun Excel...' : 'Download Master Excel (.xls)'}</span>
+            <span>{exportingExcel ? 'Menyusun Excel...' : 'Download Master Excel (.xlsx)'}</span>
           </button>
         </div>
 

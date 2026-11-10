@@ -268,4 +268,69 @@ class OrderWorkflowAndIntegrityTest extends TestCase
         $ingredient->delete();
         $this->assertSoftDeleted('ingredients', ['id' => $ingredient->id]);
     }
+
+    public function test_confirming_and_voiding_order_with_modifier_item_ingredient_deducts_and_restores_stock(): void
+    {
+        $extraShotIng = Ingredient::create([
+            'name'           => 'Espresso Roast Extra',
+            'base_unit'      => 'gr',
+            'stock_quantity' => 500,
+            'track_stock'    => true,
+        ]);
+
+        $modGroup = \App\Models\ModifierGroup::create([
+            'name'          => 'Topping Kopi',
+            'is_required'   => false,
+            'min_selection' => 0,
+            'max_selection' => 2,
+        ]);
+
+        $modItem = \App\Models\ModifierItem::create([
+            'modifier_group_id' => $modGroup->id,
+            'name'              => 'Extra Shot',
+            'price'             => 5000,
+            'ingredient_id'     => $extraShotIng->id,
+            'quantity_needed'   => 18,
+        ]);
+
+        $order = Order::create([
+            'invoice_number' => 'ARN-MODTEST01',
+            'user_id'        => $this->cashier->id,
+            'table_id'       => $this->table->id,
+            'order_type'     => 'dine_in',
+            'subtotal'       => 50000,
+            'tax_amount'     => 5000,
+            'total_amount'   => 55000,
+            'status'         => 'pending',
+            'payment_status' => 'unpaid',
+        ]);
+
+        $orderItem = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity'   => 2,
+            'unit_price' => 25000,
+            'subtotal'   => 50000,
+        ]);
+
+        $orderItem->modifiers()->create([
+            'modifier_item_id' => $modItem->id,
+            'unit_price'       => 5000,
+            'subtotal'         => 10000,
+        ]);
+
+        // Confirm pending order -> must NOT throw undefined relationship [ingredient] and must deduct 2 * 18 = 36gr
+        $confirmRes = $this->actingAs($this->cashier)->postJson("/api/orders/{$order->id}/confirm", [
+            'payment_method' => 'qris',
+            'cash_tendered'  => 55000,
+        ]);
+        $confirmRes->assertOk();
+        $this->assertEquals(464.0, (float) $extraShotIng->fresh()->stock_quantity);
+
+        // Void by Admin -> must restore 36gr back to 500gr
+        $voidRes = $this->actingAs($this->admin)->postJson("/api/orders/{$order->id}/void", [
+            'void_reason' => 'Test pembatalan modifier BOM',
+        ]);
+        $voidRes->assertOk();
+        $this->assertEquals(500.0, (float) $extraShotIng->fresh()->stock_quantity);
+    }
 }

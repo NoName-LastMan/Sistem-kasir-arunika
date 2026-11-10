@@ -50,3 +50,8 @@ storage/app/private/
 *.crt
 *.pfx
 
+# Local demo video & narration script (excluded from GitHub)
+docs/Video_Demo_Arunika_POS.mp4
+docs/Video_Demo_Arunika_POS.webm
+docs/Naskah_Video_Penjelasan_Arunika_POS.docx
+

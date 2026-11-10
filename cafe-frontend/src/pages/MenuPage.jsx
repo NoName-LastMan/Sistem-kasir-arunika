@@ -55,20 +55,20 @@ export function MenuPage() {
   }, [activeCategory, filteredProducts])
 
   return (
-    <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="py-6 sm:py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
       {/* Header Halaman Menu Pelanggan */}
-      <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-serif text-forest-950 mb-3">
+      <div className="mb-6 sm:mb-8 min-w-0">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold font-serif text-forest-950 mb-2 sm:mb-3 break-words">
           Katalog menu fajar
         </h1>
-        <p className="text-pine-700 text-base max-w-2xl font-normal">
+        <p className="text-pine-700 text-sm sm:text-base max-w-2xl font-normal">
           Seluruh menu diracik menggunakan bahan segar. Ketersediaan stok menu terhubung langsung ke sistem kasir.
         </p>
       </div>
 
       {/* Kontrol Pencarian & Filter Kategori (100% Solid & Opaque) */}
-      <div className="sticky top-20 z-30 bg-paper-50 py-4 border-b border-pine-200 mb-8 space-y-4 shadow-xs">
-        <div className="max-w-md">
+      <div className="sticky top-16 sm:top-20 z-30 bg-paper-50 py-3 sm:py-4 border-b border-pine-200 mb-8 space-y-3 sm:space-y-4 shadow-xs w-full max-w-full min-w-0">
+        <div className="w-full max-w-md">
           <SearchBar
             value={searchQuery}
             onChange={setSearchQuery}

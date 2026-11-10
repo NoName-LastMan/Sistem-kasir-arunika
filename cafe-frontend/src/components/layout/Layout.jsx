@@ -7,20 +7,31 @@ import { TableBanner } from './TableBanner'
 import { CartDrawer } from '../cart/CartDrawer'
 import { FloatingCartBar } from '../cart/FloatingCartBar'
 import { useSettingsStore } from '../../store/settingsStore'
+import { useCartStore } from '../../store/cartStore'
 
 export function Layout({ children }) {
   const location = useLocation()
   const [isCartOpen, setIsCartOpen] = useState(false)
   const settings = useSettingsStore(state => state.settings)
   const fetchSettings = useSettingsStore(state => state.fetchSettings)
+  const setTableCode = useCartStore(state => state.setTableCode)
 
   useEffect(() => {
     fetchSettings()
   }, [fetchSettings])
 
-  // Aksesibilitas perpindahan rute: scroll ke atas dan fokus ke heading utama
+  // Auto-detect kode meja jika datang lewat query parameter (?table=M01)
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' })
+    const params = new URLSearchParams(location.search)
+    const tableParam = params.get('table')
+    if (tableParam && tableParam.trim()) {
+      setTableCode(tableParam.trim())
+    }
+  }, [location.search, setTableCode])
+
+  // Aksesibilitas perpindahan rute: scroll ke atas dan fokus ke heading utama (universal Safari/Firefox/Chrome)
+  useEffect(() => {
+    window.scrollTo(0, 0)
 
     const timer = setTimeout(() => {
       const heading = document.querySelector('h1')
@@ -34,12 +45,12 @@ export function Layout({ children }) {
   }, [location.pathname])
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper-50 text-ink-900">
+    <div className="min-h-screen flex flex-col bg-paper-50 text-ink-900 w-full min-w-0">
       <SkipLink />
       <TableBanner />
       <Navbar onOpenCart={() => setIsCartOpen(true)} />
 
-      <main id="main-content" className="flex-1 focus:outline-none">
+      <main id="main-content" className="flex-1 w-full min-w-0 focus:outline-none">
         {children}
       </main>
 

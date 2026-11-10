@@ -487,17 +487,17 @@ export function POSPage() {
               <motion.div
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-3 bg-amber-400 text-forest-950 rounded-2xl flex items-center justify-between shadow-sm border border-amber-300"
+                className="p-3 bg-amber-400 text-forest-950 rounded-2xl flex flex-wrap items-center justify-between gap-2.5 shadow-sm border border-amber-300"
               >
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-7 h-7 rounded-lg bg-forest-950 text-amber-300 flex items-center justify-center shrink-0">
                     <Bell className="w-4 h-4 animate-bounce" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <span className="text-xs font-bold block leading-tight">
                       Ada {pendingGuestCount} Pesanan Tamu Baru Menunggu Konfirmasi!
                     </span>
-                    <span className="text-[10px] text-forest-900/80">
+                    <span className="text-[10px] text-forest-900/80 block">
                       Pelanggan memesan mandiri via scan QR / cafe portal.
                     </span>
                   </div>
@@ -505,7 +505,7 @@ export function POSPage() {
                 <button
                   type="button"
                   onClick={() => setShowGuestModal(true)}
-                  className="px-3 py-1.5 rounded-xl bg-forest-950 hover:bg-forest-900 text-amber-300 font-bold text-xs shadow-xs transition cursor-pointer shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-forest-950 hover:bg-forest-900 text-amber-300 font-bold text-xs shadow-xs transition cursor-pointer shrink-0 w-full sm:w-auto text-center"
                 >
                   Terima Pesanan
                 </button>
@@ -513,8 +513,8 @@ export function POSPage() {
             )}
             
             {/* Search & Actions Bar */}
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
+              <div className="relative w-full sm:flex-1">
                 <Search className="w-4 h-4 text-pine-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   ref={searchInputRef}
@@ -530,13 +530,13 @@ export function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowTableModal(true)}
-                className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
                   selectedTable 
                     ? 'border-forest-700 bg-forest-50 text-forest-900 font-bold' 
                     : 'border-pine-200 bg-white text-ink-700 hover:bg-paper-50'
                 }`}
               >
-                <LayoutGrid className="w-4 h-4 text-forest-700" />
+                <LayoutGrid className="w-4 h-4 text-forest-700 shrink-0" />
                 <span className="hidden sm:inline">{selectedTable ? `Meja ${selectedTable.number || selectedTable.table_number}` : 'Pilih Meja (F3)'}</span><span className="sm:hidden font-mono font-bold">{selectedTable ? `M${selectedTable.number || selectedTable.table_number}` : 'Meja'}</span>
               </button>
 
@@ -544,9 +544,9 @@ export function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowHeldModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-pine-200 bg-white text-ink-700 hover:bg-paper-50 text-xs font-medium transition cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2.5 rounded-xl border border-pine-200 bg-white text-ink-700 hover:bg-paper-50 text-xs font-medium transition cursor-pointer"
               >
-                <Bookmark className="w-4 h-4 text-wood-500" />
+                <Bookmark className="w-4 h-4 text-wood-500 shrink-0" />
                 <span className="hidden sm:inline">Held (F7)</span><span className="sm:hidden font-bold">Held</span>
               </button>
 
@@ -554,11 +554,11 @@ export function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowQuickAddModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-white text-xs font-bold transition shadow-warm-xs cursor-pointer shrink-0"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-white text-xs font-bold transition shadow-warm-xs cursor-pointer shrink-0"
                 title="Tambah menu baru langsung ke kasir"
               >
-                <Plus className="w-4 h-4 text-sun-400" />
-                <span className="hidden sm:inline">+ Tambah Menu</span><span className="sm:hidden font-bold">+ Menu</span>
+                <Plus className="w-4 h-4 text-sun-400 shrink-0" />
+                <span className="hidden sm:inline">Tambah Menu</span><span className="sm:hidden font-bold">Menu</span>
               </button>
             </div>
 
