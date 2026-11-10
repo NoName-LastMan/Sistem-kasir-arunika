@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # Arunika POS - Ubuntu 24.04 LTS Complete Dependency Installer
-# Menginstal seluruh dependensi sistem: PHP 8.3, Composer, Node.js 20, Python 3, Nginx, SQLite
+# Menginstal seluruh dependensi sistem: PHP 8.4, Composer, Node.js 20, Python 3, Nginx, SQLite
 # ==============================================================================
 
 set -e
@@ -23,8 +23,9 @@ echo -e "${YELLOW}  INSTALASI OTOMATIS DEPENDENSI ARUNIKA POS (UBUNTU 24.04 LTS)
 echo -e "${CYAN}================================================================${NC}"
 echo ""
 
-# 1. Hindari pop-up dialog interaktif (needrestart / debconf di Ubuntu 24.04)
+# 1. Hindari pop-up dialog interaktif & izinkan Composer dijalankan sebagai superuser
 export DEBIAN_FRONTEND=noninteractive
+export COMPOSER_ALLOW_SUPERUSER=1
 if [ -f /etc/needrestart/needrestart.conf ]; then
     sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/g" /etc/needrestart/needrestart.conf 2>/dev/null || true
 fi
@@ -50,25 +51,30 @@ echo -e "${GREEN}[2/6] Memperbarui repositori dan menginstal utilitas sistem...$
 apt-get update -y
 apt-get install -y curl wget git unzip zip sqlite3 nginx ufw software-properties-common ca-certificates gnupg
 
-# 4. Install PHP 8.3 & Ekstensi Resmi Ubuntu 24.04 (Bawaan Asli Noble Numbat)
-echo -e "${GREEN}[3/6] Menginstal PHP 8.3-FPM & ekstensi yang dibutuhkan...${NC}"
-apt-get install -y \
-    php8.3-fpm \
-    php8.3-cli \
-    php8.3-sqlite3 \
-    php8.3-gd \
-    php8.3-curl \
-    php8.3-mbstring \
-    php8.3-xml \
-    php8.3-zip \
-    php8.3-bcmath \
-    php8.3-opcache
+# 4. Tambahkan PPA Ondrej PHP untuk PHP 8.4 (Wajib untuk Symfony 8.1 / Laravel 11+)
+echo -e "${GREEN}[3/6] Menginstal PHP 8.4-FPM & ekstensi resmi...${NC}"
+if ! grep -q "^deb .*ondrej/php" /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; then
+    add-apt-repository ppa:ondrej/php -y
+    apt-get update -y
+fi
 
-# Optimasi konfigurasi PHP-FPM untuk efisiensi RAM
-sed -i 's/^pm = .*/pm = ondemand/' /etc/php/8.3/fpm/pool.d/www.conf 2>/dev/null || true
-sed -i 's/^pm.max_children = .*/pm.max_children = 10/' /etc/php/8.3/fpm/pool.d/www.conf 2>/dev/null || true
-systemctl restart php8.3-fpm
-systemctl enable php8.3-fpm
+apt-get install -y \
+    php8.4-fpm \
+    php8.4-cli \
+    php8.4-sqlite3 \
+    php8.4-gd \
+    php8.4-curl \
+    php8.4-mbstring \
+    php8.4-xml \
+    php8.4-zip \
+    php8.4-bcmath \
+    php8.4-opcache
+
+# Optimasi konfigurasi PHP 8.4-FPM untuk efisiensi RAM
+sed -i 's/^pm = .*/pm = ondemand/' /etc/php/8.4/fpm/pool.d/www.conf 2>/dev/null || true
+sed -i 's/^pm.max_children = .*/pm.max_children = 10/' /etc/php/8.4/fpm/pool.d/www.conf 2>/dev/null || true
+systemctl restart php8.4-fpm
+systemctl enable php8.4-fpm
 
 # 5. Install Composer (PHP Dependency Manager)
 echo -e "${GREEN}[4/6] Menginstal Composer...${NC}"
@@ -78,7 +84,7 @@ if ! command -v composer &> /dev/null; then
     chmod +x /usr/local/bin/composer
     echo -e "${GREEN}✓ Composer berhasil diinstal.${NC}"
 else
-    echo -e "${GREEN}✓ Composer sudah terinstal.$(composer --version | head -n 1)${NC}"
+    echo -e "${GREEN}✓ Composer sudah terinstal: $(composer --version | head -n 1)${NC}"
 fi
 
 # 6. Install Python 3 & venv (Untuk AI Forecasting Engine)
@@ -89,7 +95,7 @@ apt-get install -y python3 python3-pip python3-venv
 echo -e "${GREEN}[6/6] Menginstal Node.js 20 LTS & npm...${NC}"
 if ! command -v node &> /dev/null; then
     mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg --yes
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg --yes 2>/dev/null || true
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
     apt-get update -y
     apt-get install -y nodejs
@@ -113,7 +119,7 @@ echo -e "✓ NPM:       $(npm -v)"
 echo -e "✓ Python:    $(python3 --version)"
 echo -e "✓ Nginx:     $(nginx -v 2>&1)"
 echo -e "✓ SQLite:    $(sqlite3 --version | awk '{print $1}')"
-echo -e "✓ PHP-FPM:   $(systemctl is-active php8.3-fpm)"
+echo -e "✓ PHP 8.4:   $(systemctl is-active php8.4-fpm)"
 echo ""
 echo -e "${GREEN}Semua dependensi server Ubuntu 24.04 telah lengkap 100%!${NC}"
 echo -e "Langkah selanjutnya: Anda bisa langsung menjalankan ${YELLOW}sudo bash setup-native-vps.sh${NC}"

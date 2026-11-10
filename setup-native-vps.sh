@@ -15,6 +15,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 export DEBIAN_FRONTEND=noninteractive
+export COMPOSER_ALLOW_SUPERUSER=1
 if [ -f /etc/needrestart/needrestart.conf ]; then
     sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/g" /etc/needrestart/needrestart.conf 2>/dev/null || true
 fi
@@ -43,22 +44,25 @@ else
     echo -e "${GREEN}✓ Swap sudah aktif.${NC}"
 fi
 
-# 2. INSTALL SYSTEM PACKAGES, PHP 8.3, PYTHON3, NODEJS 20
-echo -e "${GREEN}[2/8] Menginstal paket sistem & dependensi...${NC}"
+# 2. INSTALL SYSTEM PACKAGES, PHP 8.4, PYTHON3, NODEJS 20
+echo -e "${GREEN}[2/8] Menginstal paket sistem & dependensi (PHP 8.4)...${NC}"
 apt-get update -y
 apt-get install -y curl wget git unzip zip software-properties-common ufw nginx sqlite3 ca-certificates gnupg
 
-# Deteksi versi Ubuntu: Ubuntu 24.04 (noble) sudah menyediakan PHP 8.3 secara bawaan
-UBUNTU_CODENAME=$(lsb_release -cs 2>/dev/null || echo "unknown")
-if [ "$UBUNTU_CODENAME" != "noble" ]; then
-    if ! grep -q "^deb .*ondrej/php" /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; then
-        add-apt-repository ppa:ondrej/php -y 2>/dev/null || true
-        apt-get update -y
-    fi
+# Tambah PPA Ondrej PHP untuk PHP 8.4
+if ! grep -q "^deb .*ondrej/php" /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; then
+    add-apt-repository ppa:ondrej/php -y 2>/dev/null || true
+    apt-get update -y
 fi
 
-apt-get install -y php8.3-fpm php8.3-cli php8.3-sqlite3 php8.3-gd \
-    php8.3-curl php8.3-mbstring php8.3-xml php8.3-zip php8.3-bcmath php8.3-opcache
+apt-get install -y php8.4-fpm php8.4-cli php8.4-sqlite3 php8.4-gd \
+    php8.4-curl php8.4-mbstring php8.4-xml php8.4-zip php8.4-bcmath php8.4-opcache
+
+# Optimasi konfigurasi PHP 8.4-FPM
+sed -i 's/^pm = .*/pm = ondemand/' /etc/php/8.4/fpm/pool.d/www.conf 2>/dev/null || true
+sed -i 's/^pm.max_children = .*/pm.max_children = 10/' /etc/php/8.4/fpm/pool.d/www.conf 2>/dev/null || true
+systemctl restart php8.4-fpm
+systemctl enable php8.4-fpm
 
 apt-get install -y python3 python3-pip python3-venv
 
@@ -200,7 +204,7 @@ server {
     # 4. SSE Order Stream (Wajib Non-Buffering)
     location /api/orders/stream {
         include fastcgi_params;
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $BASE_DIR/pos-backend/public/index.php;
         fastcgi_buffering off;
         fastcgi_cache off;
@@ -218,7 +222,7 @@ server {
 
         location ~ \.php$ {
             include fastcgi_params;
-            fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+            fastcgi_pass unix:/run/php/php8.4-fpm.sock;
             fastcgi_param SCRIPT_FILENAME $BASE_DIR/pos-backend/public/index.php;
             fastcgi_read_timeout 60s;
         }
@@ -243,7 +247,7 @@ rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
 ln -sf /etc/nginx/sites-available/arunika-pos.conf /etc/nginx/sites-enabled/arunika-pos.conf
 nginx -t
 systemctl reload nginx
-systemctl restart php8.3-fpm
+systemctl restart php8.4-fpm
 
 # 7. SETUP CRON SCHEDULER
 echo -e "${GREEN}[7/8] Menyiapkan Cron Scheduler Laravel...${NC}"

@@ -7,7 +7,7 @@ Dokumen ini adalah instruksi operasional untuk AI Agent (seperti Antigravity, Cl
 
 ## 1. Ringkasan Arsitektur Proyek
 Repository ini terdiri dari 4 komponen:
-1. **`pos-backend`** (PHP 8.3 / Laravel 11): REST API, Autentikasi Sanctum, SSE (`/api/orders/stream`), Database SQLite WAL mode. (Port 8000 / PHP-FPM).
+1. **`pos-backend`** (PHP 8.4 / Laravel 11): REST API, Autentikasi Sanctum, SSE (`/api/orders/stream`), Database SQLite WAL mode. (Port 8000 / PHP-FPM).
 2. **`forecasting-engine`** (Python 3.11 / FastAPI): AI Demand & Stock Forecasting microservice. (Port 8001).
 3. **`pos-frontend`** (React 18 + Vite + Tailwind 4 + Framer Motion): Web app kasir, manajemen meja, admin dashboard, KDS. (Port 5173 / Nginx root `/`).
 4. **`cafe-frontend`** (React 18 + Vite + Tailwind 4 + Framer Motion): Portal self-order tamu kafe via QR code meja. (Port 5174 / Nginx `/menu`).
