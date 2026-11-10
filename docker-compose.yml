@@ -11,6 +11,7 @@ services:
       - APP_NAME=ArunikaPOS
       - APP_ENV=production
       - APP_DEBUG=false
+      - APP_KEY=${APP_KEY:-base64:y5MocF9Zp8OZqpKELtL20Xx8Bwzu6DyIwuBeyPNM3m4=}
       - APP_URL=http://localhost:8000
       - DB_CONNECTION=sqlite
       - DB_DATABASE=/var/www/database/database.sqlite
