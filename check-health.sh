@@ -21,7 +21,7 @@ check_service() {
     local expected_code="$3"
 
     echo -n "Checking $name ($url)... "
-    response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "$url" 2>/dev/null)
+    response=$(curl -s -L -o /dev/null -w "%{http_code}" --connect-timeout 5 "$url" 2>/dev/null)
 
     if [ "$response" = "$expected_code" ]; then
         echo -e "${GREEN}[OK - HTTP $response]${NC}"

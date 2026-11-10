@@ -200,7 +200,11 @@ server {
     }
 
     # 2. Portal Tamu Kafe (Self-Order di /menu)
-    location ^~ /menu {
+    location = /menu {
+        rewrite ^ /menu/ last;
+    }
+
+    location ^~ /menu/ {
         alias $BASE_DIR/cafe-frontend/dist/;
         try_files \$uri \$uri/ /menu/index.html;
     }
