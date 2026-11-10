@@ -14,6 +14,11 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+export DEBIAN_FRONTEND=noninteractive
+if [ -f /etc/needrestart/needrestart.conf ]; then
+    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/g" /etc/needrestart/needrestart.conf 2>/dev/null || true
+fi
+
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo -e "${CYAN}========================================================${NC}"
@@ -39,26 +44,32 @@ else
 fi
 
 # 2. INSTALL SYSTEM PACKAGES, PHP 8.3, PYTHON3, NODEJS 20
-echo -e "${GREEN}[2/8] Menginstal paket sistem & repositori...${NC}"
-apt update -y
-apt install -y curl wget git unzip zip software-properties-common ufw nginx sqlite3
+echo -e "${GREEN}[2/8] Menginstal paket sistem & dependensi...${NC}"
+apt-get update -y
+apt-get install -y curl wget git unzip zip software-properties-common ufw nginx sqlite3 ca-certificates gnupg
 
-# Tambah PPA Ondrej PHP jika belum ada
-if ! grep -q "^deb .*ondrej/php" /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; then
-    add-apt-repository ppa:ondrej/php -y
-    apt update -y
+# Deteksi versi Ubuntu: Ubuntu 24.04 (noble) sudah menyediakan PHP 8.3 secara bawaan
+UBUNTU_CODENAME=$(lsb_release -cs 2>/dev/null || echo "unknown")
+if [ "$UBUNTU_CODENAME" != "noble" ]; then
+    if ! grep -q "^deb .*ondrej/php" /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; then
+        add-apt-repository ppa:ondrej/php -y 2>/dev/null || true
+        apt-get update -y
+    fi
 fi
 
-apt install -y php8.3-fpm php8.3-cli php8.3-sqlite3 php8.3-gd \
+apt-get install -y php8.3-fpm php8.3-cli php8.3-sqlite3 php8.3-gd \
     php8.3-curl php8.3-mbstring php8.3-xml php8.3-zip php8.3-bcmath php8.3-opcache
 
-apt install -y python3 python3-pip python3-venv
+apt-get install -y python3 python3-pip python3-venv
 
 # Install Node.js 20 jika belum ada
 if ! command -v node &> /dev/null; then
     echo "Menginstal Node.js 20 LTS..."
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    apt install -y nodejs
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg --yes 2>/dev/null || true
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
+    apt-get update -y
+    apt-get install -y nodejs
 fi
 
 # Install Composer jika belum ada
