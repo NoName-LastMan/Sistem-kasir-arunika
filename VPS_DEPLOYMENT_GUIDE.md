@@ -312,12 +312,6 @@ sudo nano /etc/nginx/sites-available/arunika-pos.conf
 Tempel konfigurasi produksi berikut (sudah dilengkapi proteksi SSE non-buffering, batas upload 15MB, dan Gzip compression):
 
 ```nginx
-# Konfigurasi Gzip Compression (Hemat Bandwidth & CPU)
-gzip on;
-gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
-gzip_min_length 1024;
-gzip_vary on;
-
 server {
     listen 80;
     server_name pos.domainanda.com; # Ganti dengan domain/subdomain Anda
